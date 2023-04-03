@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="Resources\oauth-token-access_token-response.json" />
     <Content Remove="Resources\openid-configuration.json" />
     <Content Remove="Resources\V2\openid-configuration.json" />
   </ItemGroup>
@@ -19,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\oauth-token-access_token-response.json" />
     <EmbeddedResource Include="Resources\openid-configuration.json" />
     <EmbeddedResource Include="Resources\V2\openid-configuration.json" />
   </ItemGroup>
