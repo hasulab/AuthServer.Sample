@@ -13,7 +13,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{748E1551-049
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6E9F86A4-CEF7-4D10-BD64-4A44DBEAEC42}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthServer.Sample", "src\AuthServer.Sample\AuthServer.Sample.csproj", "{C80863F8-6C1F-4176-8658-9A077E91D4D0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthServer.Sample", "src\AuthServer.Sample\AuthServer.Sample.csproj", "{C80863F8-6C1F-4176-8658-9A077E91D4D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthServer.Sample.Tests", "tests\AuthServer.Sample.Tests\AuthServer.Sample.Tests.csproj", "{2BE08D33-E0CD-428F-8077-2B7F02CD7919}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,11 +27,16 @@ Global
 		{C80863F8-6C1F-4176-8658-9A077E91D4D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C80863F8-6C1F-4176-8658-9A077E91D4D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C80863F8-6C1F-4176-8658-9A077E91D4D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BE08D33-E0CD-428F-8077-2B7F02CD7919}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BE08D33-E0CD-428F-8077-2B7F02CD7919}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BE08D33-E0CD-428F-8077-2B7F02CD7919}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BE08D33-E0CD-428F-8077-2B7F02CD7919}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C80863F8-6C1F-4176-8658-9A077E91D4D0} = {748E1551-0497-46D4-A72E-9BBDE458EDBD}
+		{2BE08D33-E0CD-428F-8077-2B7F02CD7919} = {6E9F86A4-CEF7-4D10-BD64-4A44DBEAEC42}
 	EndGlobalSection
 EndGlobal

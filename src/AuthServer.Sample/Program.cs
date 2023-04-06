@@ -7,9 +7,11 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
+    .AddSingleton<AppSettings>()
     .AddSingleton<ResourceReader>()
     .AddTransient<WellKnownOpenidConfiguration>()
-    .AddTransient<OAuth2Token>();
+    .AddTransient<OAuth2Token>()
+    .AddTransient<IJwtUtils, JwtUtils>();
 var app = builder.Build();
 
 var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
