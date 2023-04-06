@@ -177,3 +177,55 @@ public class JwtUtils : IJwtUtils
 }
 
 */
+
+public static class StreamExtentions
+{
+
+    public static Stream GenerateStreamFromString(string s)
+    {
+        var stream = new MemoryStream();
+        var writer = new StreamWriter(stream);
+        writer.Write(s);
+        writer.Flush();
+        stream.Position = 0;
+        return stream;
+    }
+
+    public static Stream GenerateStreamFromStringBuilder(StringBuilder s)
+    {
+        var stream = new MemoryStream();
+        var writer = new StreamWriter(stream);
+        writer.Write(s);
+        writer.Flush();
+        stream.Position = 0;
+        return stream;
+    }
+}
+public static class RequestExtentions
+{
+    public static async Task FormContentToJson(this HttpRequest request)
+    {
+        if (!request.HasFormContentType)
+        {
+            throw new Exception("Invalid ContentType");
+        }
+        StringBuilder stringBuilder = new("{");
+        var formFields = await request.ReadFormAsync();
+        var enumerator = formFields.GetEnumerator();
+        var hasMore = enumerator.MoveNext();
+        while (hasMore)
+        {
+            var field = enumerator.Current;
+            stringBuilder.Append($"\"{field.Key}\":\"{field.Value}\"");
+            hasMore = enumerator.MoveNext();
+            if (hasMore)
+            {
+                stringBuilder.Append(',');
+            }
+        }
+        stringBuilder.Append("}");
+        request.ContentType = "application/json";
+        request.Body = StreamExtentions.GenerateStreamFromStringBuilder(stringBuilder);
+    }
+}
+

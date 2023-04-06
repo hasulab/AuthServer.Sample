@@ -1,6 +1,9 @@
 using AuthServer.Sample.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -9,19 +12,38 @@ builder.Services
     .AddTransient<OAuth2Token>();
 var app = builder.Build();
 
+var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
+
 app.Use(async (context, next) =>
 {
-    Console.WriteLine($"1. Endpoint: {context.GetEndpoint()?.DisplayName ?? "(null)"}");
     Console.WriteLine(context.Request.ContentType);
+    Console.WriteLine($"1. Endpoint: {context.GetEndpoint()?.DisplayName ?? "(null)"}");
+    //if(context.Request.ContentType == "application/x-www-form-urlencoded")
+    if (context.Request.HasFormContentType)
+    {
+        await context.Request.FormContentToJson();
+    }
     await next(context);
-});
 
+    static async Task AwaitRequestTask()
+    {
+        await Task.CompletedTask;
+    }
+});
+//app.UseEndpoints();
+app.UseRouting();
 
 app.MapGet("/", (LinkGenerator linker) =>
        {
-           var v1Url = linker.GetPathByName("v1-well-known-config", values: new { tenantId = Guid.Empty });
-           var v2Url = linker.GetPathByName("v2-well-known-config", values: new { tenantId = Guid.Empty });
-           var htmlBody = $"The link to the /.well-known/openid-configuration route of <a href='{v1Url}'>v1</a>  <a href='{v2Url}'>v2</a> ";
+           var urls = new Dictionary<string, string?>()
+           {
+               { "V1 /.well-known/openid-configuration",linker.GetPathByName("v1-well-known-config", values: new { tenantId = Guid.Empty }) },
+               { "V2 /.well-known/openid-configuration",linker.GetPathByName("v2-well-known-config", values: new { tenantId = Guid.Empty }) },
+               { "V1 /oauth2/token",linker.GetPathByName("v1-oauth2-token", values: new { tenantId = Guid.Empty }) },
+           }
+           .Select(x => $"<a href='{x.Value}'>{x.Key}</a>").ToArray();
+
+           var htmlBody = $"<div><span>The link to the</span> { string.Join(",", urls) } </dv>";
            return Results.Content($"<html><body></body>{htmlBody}</html>", "text/html; charset=utf-8");
        });
 
@@ -42,12 +64,14 @@ app.MapGet(WellKnownOpenidConfiguration.ConstV2Url, (WellKnownOpenidConfiguratio
 app.MapPost(OAuth2Token.ConstV1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest) =>
 {
     return Results.Text(tokenService.GetResponse(tokenRequest), "application/json");
-});
+})
+    .WithName("v1-oauth2-token");
 
 app.Use(async (context, next) =>
 {
-    Console.WriteLine($"1. Endpoint: {context.GetEndpoint()?.DisplayName ?? "(null)"}");
+    //context.Request.HasFormContentType
     Console.WriteLine(context.Request.ContentType);
+    Console.WriteLine($"2. Endpoint: {context.GetEndpoint()?.DisplayName ?? "(null)"}");
     await next(context);
 });
 
