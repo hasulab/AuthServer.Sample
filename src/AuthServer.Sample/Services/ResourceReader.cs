@@ -179,12 +179,18 @@ public class JwtUtils : IJwtUtils
         //X509SecurityKey key = new X509SecurityKey(cert);
         //signingCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
 
+        var nowDateTimeoffset = DateTimeOffset.UtcNow;
+        var nowUnix = nowDateTimeoffset.ToUnixTimeSeconds;
+        var nowUtc = nowDateTimeoffset.UtcDateTime;
+
         var tokenDescriptor = new SecurityTokenDescriptor()
         {
             Audience = "https://TestValidAudience",
             Issuer = "http://TestValidIssuer",
             Subject = claimsIdentity,
-            Expires = DateTime.Now.AddMinutes(10),
+            NotBefore = nowUtc,
+            IssuedAt = nowUtc,
+            Expires = nowUtc.AddMinutes(10),
             //EncryptingCredentials = encryptionCredentials,
             SigningCredentials = signingCredentials
         };
