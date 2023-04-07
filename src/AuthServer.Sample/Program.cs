@@ -1,3 +1,4 @@
+using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing.Patterns;
@@ -18,9 +19,7 @@ var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
 
 app.Use(async (context, next) =>
 {
-    Console.WriteLine(context.Request.ContentType);
-    Console.WriteLine($"1. Endpoint: {context.GetEndpoint()?.DisplayName ?? "(null)"}");
-    //if(context.Request.ContentType == "application/x-www-form-urlencoded")
+
     if (context.Request.HasFormContentType)
     {
         await context.Request.FormContentToJson();
