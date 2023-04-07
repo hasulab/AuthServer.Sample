@@ -102,7 +102,7 @@ public class OAuth2Token
             ClientId = Guid.NewGuid().ToString(),
         };
         var claims = claimsProvider.BuildClaims(claimsToInclude, requestCtx, authUser);
-        ClaimsIdentity claimsIdentity = new ClaimsIdentity(new[] { new Claim("subject", "test") });
+        ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims);
         return _jwtUtils.GenerateToken(claimsIdentity);
     }
 

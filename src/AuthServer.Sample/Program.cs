@@ -62,9 +62,10 @@ app.MapGet(WellKnownOpenidConfiguration.ConstV2Url, (WellKnownOpenidConfiguratio
 })
     .WithName("v2-well-known-config");
 
-app.MapPost(OAuth2Token.ConstV1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest) =>
+app.MapPost(OAuth2Token.ConstV1Url, (HttpContext context, OAuth2Token tokenService, OAuthTokenRequest tokenRequest) =>
 {
-    return Results.Text(tokenService.GetResponse(tokenRequest), "application/json");
+    var requestConext = context.GetRequestContext();
+    return Results.Text(tokenService.GetResponse(tokenRequest, requestConext), "application/json");
 })
     .WithName("v1-oauth2-token");
 
