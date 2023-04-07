@@ -42,10 +42,13 @@ public static class HttpContextExtensions
         var requestContext = context.Features.Get<RequestContext>();
         if (requestContext == null)
         {
-            var path = context.Request.Path.Value ?? string.Empty;
+            var request = context.Request;
+            var path = request.Path.Value ?? string.Empty;
             var pathSegments = path.Split('/');
             var hasTenantId = TryTenantId(pathSegments, out Guid tenantId);
             var hasVersion = TryVersion(pathSegments, out float version);
+
+            var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
 
             requestContext = new RequestContext
             {
@@ -56,7 +59,8 @@ public static class HttpContextExtensions
                 TenantId = tenantId,
                 HasTenantId = hasTenantId,
                 Version = version,
-                HasVersion = hasVersion
+                HasVersion = hasVersion,
+                SiteName = siteName
             };
             context.Features.Set(requestContext);
         }
@@ -89,6 +93,7 @@ public static class HttpContextExtensions
         public bool HasTenantId { get; internal set; }
         public float Version { get; internal set; }
         public bool HasVersion { get; internal set; }
+        public string SiteName { get; internal set; }
     }
 
 }

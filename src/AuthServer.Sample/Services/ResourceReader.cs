@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
+using static AuthServer.Sample.Extentions.HttpContextExtensions;
 
 namespace AuthServer.Sample.Services;
 
@@ -81,31 +82,35 @@ public class OAuth2Token
     private const string ConstV1ConfigresourceName = "AuthServer.Sample.Resources.oauth-token-access_token-response.json";
     private const string ConstV2ConfigresourceName = "AuthServer.Sample.Resources.V2.openid-configuration.json";
 
-    private readonly ResourceReader _resourceReader;
     private readonly IJwtUtils _jwtUtils;
+    private readonly ClaimsProvider claimsProvider;
 
-    public OAuth2Token(ResourceReader resourceReader, IJwtUtils jwtUtils)
+    public OAuth2Token(IJwtUtils jwtUtils, ClaimsProvider claimsProvider)
     {
-        _resourceReader = resourceReader;
         _jwtUtils = jwtUtils;
+        this.claimsProvider = claimsProvider;
     }
 
-    public string GetResponse(OAuthTokenRequest tokenRequest)
+    public string GetResponse(OAuthTokenRequest tokenRequest, RequestContext requestCtx)
     {
-        ClaimsIdentity claimsIdentity = new ClaimsIdentity(new[] { new Claim("subject", "test" ) });
+        var claimsToInclude= new string[]{ "aud", "iss", "idp", "oid", "sub", "tid", "ver" };
+        var authUser = new AuthUser
+        {
+            AppId=Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid().ToString(),
+            UserId = Guid.NewGuid().ToString(),
+            ClientId = Guid.NewGuid().ToString(),
+        };
+        var claims = claimsProvider.BuildClaims(claimsToInclude, requestCtx, authUser);
+        ClaimsIdentity claimsIdentity = new ClaimsIdentity(new[] { new Claim("subject", "test") });
         return _jwtUtils.GenerateToken(claimsIdentity);
-        //return GetResourceText(ConstV1ConfigresourceName, "", "");
     }
 
-    private string GetResourceText(string resourceName, string endpoint, string tenantId)
-    {
-        return _resourceReader.GetStringFromResource(resourceName);
-    }
 }
 public class OAuthTokenRequest
 {
     public string grant_type { get; set; } = "client_credentials";
-     public string client_id { get; set; }
+    public string client_id { get; set; }
     public string client_secret { get; set; }
     public string code_verifier { get; set; }
     public string redirect_uri { get; set; }
@@ -218,7 +223,7 @@ public class JwtUtils : IJwtUtils
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 IssuerSigningKey = secret,
-                TokenDecryptionKey= secret,
+                TokenDecryptionKey = secret,
                 // set clockskew to zero so tokens expire exactly at token expiration time (instead of 5 minutes later)
                 ClockSkew = TimeSpan.Zero
             }, out SecurityToken validatedToken);
@@ -262,30 +267,45 @@ public static class StreamExtentions
 
 public class ClaimsProvider
 {
-    delegate Claim claimBuilder(string name, HttpRequest request, AuthUser user);
+    delegate Claim claimBuilder(string name, RequestContext request, AuthUser user);
 
     private static readonly Dictionary<string, claimBuilder> _claimBuilders = new()
     {
-        {"sub", (name, req, user)=> { return new Claim(name, user.Id); } },
+        {"sub", (name, req, user)=> { return new Claim(name, user.UserId??user.Id); } },
+        {"oid", (name, req, user)=> { return new Claim(name, user.Id); } },
         {"name", (name, req, user)=> { return new Claim(name, user.Name); } },
         {"family_name", (name, req, user)=> { return new Claim(name, user.FamilyName); } },
         {"given_name", (name, req, user)=> { return new Claim(name, user.GivenName); } },
         {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
         {"unique_name", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"preferred_username", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"appid", (name, req, user)=> { return new Claim(name, user.AppId); } },
+        {"aud", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+        {"nonce", (name, req, user)=> { return new Claim(name, user.Nonce); } },
+        {"roles", (name, req, user)=> { return new Claim(name, user.Roles); } },
 
+        {"tid", (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
+        {"ver", (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
+        {"iss", (name, req, user)=> { return new Claim(name, $"{req.SiteName}/{req.TenantId}"); } },
+        {"idp", (name, req, user)=> { return new Claim(name, $"{req.SiteName}/{req.TenantId}"); } },
     };
     public ClaimsProvider()
     {
-        
+
     }
 
-    public IEnumerable<Claim> BuildClaims(HttpRequest request, string[] includeClaims)
+    internal IEnumerable<Claim> BuildClaims(string[] includeClaims, RequestContext request, AuthUser user)
     {
-        var claims = new List<Claim>();
+        if (includeClaims?.Length > 0)
+        {
+            return includeClaims
+                .Where(x => _claimBuilders.ContainsKey(x))
+                .Select(x => _claimBuilders[x](x, request, user))
+                .Where(x => !string.IsNullOrEmpty(x.Value))
+                .ToList();     
+        }
 
-
-        return claims;
+        return new List<Claim>();
     }
 
 
@@ -293,10 +313,16 @@ public class ClaimsProvider
 
 internal class AuthUser
 {
-    public string Version { get; set; } = "1.0";
     public string Id { get; set; }
+    public string UserId { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
     public string FamilyName { get; set; }
     public string GivenName { get; set; }
+
+    public string ClientId { get; set; }
+    public string AppId { get; set; }
+    public string Nonce { get; set; }
+    public string Roles { get; set; }
+
 }
