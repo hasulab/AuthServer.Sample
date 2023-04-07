@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace AuthServer.Sample.Services;
 
@@ -286,3 +287,89 @@ public static class RequestExtentions
     }
 }
 
+public static class HttpContextExtensions
+{
+    const string versionRegEx = @"^v\d.\d$";
+    public static void SetRequestContext(this HttpContext context)
+    {
+        var requestContext = context.Features.Get<RequestContext>();
+        if (requestContext == null)
+        {
+            var path = context.Request.Path.Value??string.Empty;
+            var pathSegments = path.Split('/');
+            Guid tenantId = Guid.Empty;
+            var hasTenantId = pathSegments.Length > 0 
+                ? Guid.TryParse(pathSegments[1], out tenantId) 
+                : false;
+            var versionString = pathSegments.FirstOrDefault(x => Regex.IsMatch(x, versionRegEx)) ?? "v1.0";
+            float.TryParse(versionString.Replace("v",string.Empty), out float version);
+            requestContext = new RequestContext
+            {
+                IPAddress = context.Connection.RemoteIpAddress != null
+                ? context.Connection.RemoteIpAddress.ToString()
+                : string.Empty,
+                Path = path,
+                TenantId = tenantId.ToString(),
+                HasTenantId = hasTenantId,
+                Version= version
+            };
+            context.Features.Set(requestContext);
+        }
+    }
+
+    public static RequestContext? GetRequestContext(this HttpContext context)
+    {
+        return context.Features.Get<RequestContext>();
+    }
+
+    public record class RequestContext
+    {
+        public string IPAddress { get; internal set; }
+        public string Path { get; internal set; }
+        public string TenantId { get; internal set; }
+        public bool HasTenantId { get; internal set; }
+        public float Version { get; internal set; }
+    }
+
+}
+
+public class ClaimsProvider
+{
+    delegate Claim claimBuilder(string name, HttpRequest request, AuthUser user);
+
+    private static readonly Dictionary<string, claimBuilder> _claimBuilders = new()
+    {
+        {"sub", (name, req, user)=> { return new Claim(name, user.Id); } },
+        {"name", (name, req, user)=> { return new Claim(name, user.Name); } },
+        {"family_name", (name, req, user)=> { return new Claim(name, user.FamilyName); } },
+        {"given_name", (name, req, user)=> { return new Claim(name, user.GivenName); } },
+        {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"unique_name", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
+
+    };
+    public ClaimsProvider()
+    {
+        
+    }
+
+    public IEnumerable<Claim> BuildClaims(HttpRequest request, string[] includeClaims)
+    {
+        var claims = new List<Claim>();
+
+
+        return claims;
+    }
+
+
+}
+
+internal class AuthUser
+{
+    public string Version { get; set; } = "1.0";
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public string FamilyName { get; set; }
+    public string GivenName { get; set; }
+}
