@@ -39,7 +39,7 @@ public static class HttpContextExtensions
     const string versionRegEx = @"^v\d.\d$";
     public static void SetRequestContext(this HttpContext context)
     {
-        var requestContext = context.Features.Get<RequestContext>();
+        var requestContext = context.Features.Get<AuthRequestContext>();
         if (requestContext == null)
         {
             var request = context.Request;
@@ -49,8 +49,8 @@ public static class HttpContextExtensions
             var hasVersion = TryVersion(pathSegments, out float version);
 
             var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
-
-            requestContext = new RequestContext
+            var issuer = hasTenantId ? $"{siteName}/tenantId" : siteName;
+            requestContext = new AuthRequestContext
             {
                 IPAddress = context.Connection.RemoteIpAddress != null
                 ? context.Connection.RemoteIpAddress.ToString()
@@ -60,7 +60,8 @@ public static class HttpContextExtensions
                 HasTenantId = hasTenantId,
                 Version = version,
                 HasVersion = hasVersion,
-                SiteName = siteName
+                SiteName = siteName,
+                Issuer = issuer
             };
             context.Features.Set(requestContext);
         }
@@ -80,21 +81,22 @@ public static class HttpContextExtensions
         }
     }
 
-    public static RequestContext? GetRequestContext(this HttpContext context)
+    public static AuthRequestContext? GetRequestContext(this HttpContext context)
     {
-        return context.Features.Get<RequestContext>();
+        return context.Features.Get<AuthRequestContext>();
     }
-
-    public record class RequestContext
-    {
-        public string IPAddress { get; internal set; }
-        public string Path { get; internal set; }
-        public Guid TenantId { get; internal set; }
-        public bool HasTenantId { get; internal set; }
-        public float Version { get; internal set; }
-        public bool HasVersion { get; internal set; }
-        public string SiteName { get; internal set; }
-    }
-
 }
 
+public record class AuthRequestContext
+{
+    public string IPAddress { get; internal set; }
+    public string Path { get; internal set; }
+    public Guid TenantId { get; internal set; }
+    public bool HasTenantId { get; internal set; }
+    public float Version { get; internal set; }
+    public bool HasVersion { get; internal set; }
+    public string SiteName { get; internal set; }
+    public string Issuer { get; internal set; }
+    public DateTimeOffset RequestTime { get; internal set; } = DateTimeOffset.UtcNow;
+
+}

@@ -8,13 +8,9 @@ namespace AuthServer.Sample.Tests
 {
     public class RequestContextTests
     {
-        
-
         [Fact]
         public void TestRequestContext()
         {
-            HttpContextExtensions.RequestContext requestContext;
-
             var moqHttpContext = new Mock<HttpContext>();
             var moqHttpRequest = new Mock<HttpRequest>();
             var moqFeatures = new Mock<IFeatureCollection>();
@@ -31,7 +27,7 @@ namespace AuthServer.Sample.Tests
             moqHttpContext.Setup(x => x.Connection.RemoteIpAddress).Returns(() => new System.Net.IPAddress(ipAddr));
 
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
-            var requestContext1 = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
+            var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
         }
     }
 

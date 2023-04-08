@@ -15,7 +15,8 @@ namespace AuthServer.Sample.Tests
         public void TestGenerateToken()
         {
             var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
-            var token = util.GenerateToken(new ClaimsIdentity(new List<Claim> { new Claim("Id", "TestId") }));
+            AuthRequestContext requestContext = new ();
+            var token = util.GenerateToken(new ClaimsIdentity(new List<Claim> { new Claim("Id", "TestId") }), requestContext);
         }
         class TestOptions : IOptions<AppSettings>
         {
@@ -31,8 +32,6 @@ namespace AuthServer.Sample.Tests
         [Fact]
         public void TestGenerateTokenFromRequest()
         {
-            HttpContextExtensions.RequestContext requestContext;
-
             var moqHttpContext = new Mock<HttpContext>();
             var moqHttpRequest = new Mock<HttpRequest>();
             var moqFeatures = new Mock<IFeatureCollection>();
@@ -49,13 +48,13 @@ namespace AuthServer.Sample.Tests
             moqHttpContext.Setup(x => x.Connection.RemoteIpAddress).Returns(() => new System.Net.IPAddress(ipAddr));
 
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
-            var requestContext1 = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
+            var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
             var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
             var claimsProvider = new ClaimsProvider();
             var service = new OAuth2Token(util, claimsProvider);
             var tokenRequest = new OAuthTokenRequest();
-            var jwtToken = service.GetResponse(tokenRequest, requestContext1);
+            var jwtToken = service.GetResponse(tokenRequest, requestContext);
 
         }
     }
