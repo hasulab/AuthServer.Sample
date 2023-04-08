@@ -51,8 +51,7 @@ namespace AuthServer.Sample.Tests
             var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
             var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
-            var claimsProvider = new ClaimsProvider();
-            var service = new OAuth2Token(util, claimsProvider);
+            var service = new OAuth2Token(util, null);
             var tokenRequest = new OAuthTokenRequest();
             var jwtToken = service.GetResponse(tokenRequest, requestContext);
 

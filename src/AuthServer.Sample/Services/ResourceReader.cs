@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
@@ -74,35 +75,138 @@ public class WellKnownOpenidConfiguration
     }
 }
 
+
+public class ClientDataProvider
+{
+    public ClientDataProvider() 
+    {
+        
+    }
+
+    public virtual bool ValidateClient(string clientId)
+    {
+        var list = new List<string>()
+        {
+            "00000000-0000-0000-0000-000000000001",
+            "00000001-0000-0000-a000-000000000001",
+            "00000002-0000-0000-b000-000000000001"
+        };
+        return list.Any(x => x == clientId);
+    }
+
+    public virtual bool ValidateApp(string appId)
+    {
+        var list = new List<string>()
+        {
+            "00000000-0000-0000-0000-000000000002",
+            "00000001-0000-0000-a000-000000000002",
+            "00000002-0000-0000-b000-000000000002"
+        };
+        return list.Any(x => x == appId);
+    }
+    public virtual StoredUser ValidateSecret(string clientId, string clientSecret)
+    {
+        return new StoredUser
+        {
+            Id = "10000000-0000-0000-0000-000000000001"
+        };
+    }
+
+    public virtual StoredUser ValidateUserPassword(string clientId, string username, string password)
+    {
+        return new StoredUser
+        {
+            Id = "10000000-0000-0000-0000-000000000002",
+            Name="Test",
+            Email="test@test.com",
+            UserName="Test"
+        };
+    }
+    public class StoredUser
+    {
+        public string Id { get; set; }
+        public string UserName { get; set; }
+        public string Name { get; set; }
+        public string Email { get; set; }
+        public string GivenName { get; set; }
+        public string SurName { get; set; }
+        public string[] Roles { get; set; }
+    }
+}
+
 public class OAuth2Token
 {
     //"/oauth2/token"
     public const string ConstV1Url = "/{tenantId}/oauth2/token";
     public const string ConstV2Url = "/{tenantId}/oauth2/v2.0/token";
-    //oauth-token-access_token-response
-    private const string ConstV1ConfigresourceName = "AuthServer.Sample.Resources.oauth-token-access_token-response.json";
-    private const string ConstV2ConfigresourceName = "AuthServer.Sample.Resources.V2.openid-configuration.json";
 
     private readonly IJwtUtils _jwtUtils;
-    private readonly ClaimsProvider claimsProvider;
+    private readonly ClientDataProvider clientDataProvider;
 
-    public OAuth2Token(IJwtUtils jwtUtils, ClaimsProvider claimsProvider)
+    delegate Claim claimBuilder(string name, AuthRequestContext request, AuthUser user);
+
+    private static readonly Dictionary<string, claimBuilder> _claimBuilders = new()
+    {
+        {"sub", (name, req, user)=> { return new Claim(name, user.UserId??user.Id); } },
+        {"oid", (name, req, user)=> { return new Claim(name, user.Id); } },
+        {"name", (name, req, user)=> { return new Claim(name, user.Name); } },
+        {"family_name", (name, req, user)=> { return new Claim(name, user.FamilyName); } },
+        {"given_name", (name, req, user)=> { return new Claim(name, user.GivenName); } },
+        {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"unique_name", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"preferred_username", (name, req, user)=> { return new Claim(name, user.Email); } },
+        {"nonce", (name, req, user)=> { return new Claim(name, user.Nonce); } },
+        //{"roles", (name, req, user)=> { return new Claim(name, user.Roles); } },
+        {"appid", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+        {"aud", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+
+        {"tid", (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
+        {"ver", (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
+        //{"iss", (name, req, user)=> { return new Claim(name, req.Issuer); } },
+        {"idp", (name, req, user)=> { return new Claim(name, req.Issuer); } },
+    };
+
+    internal IEnumerable<Claim> BuildClaims(string[] includeClaims, AuthRequestContext request, AuthUser user)
+    {
+        if (includeClaims?.Length > 0)
+        {
+            var claims = includeClaims
+                .Where(x => _claimBuilders.ContainsKey(x))
+                .Select(x => _claimBuilders[x](x, request, user))
+                .Where(x => !string.IsNullOrEmpty(x.Value))
+                .ToList();
+
+            if (includeClaims.Contains("roles") && user.Roles?.Length > 0)
+            {
+                claims.AddRange(user.Roles.Select(x => new Claim("roles", x))); 
+            }
+
+            return claims;
+        }
+
+        return new List<Claim>();
+    }
+
+    public OAuth2Token(IJwtUtils jwtUtils, ClientDataProvider clientDataProvider)
     {
         _jwtUtils = jwtUtils;
-        this.claimsProvider = claimsProvider;
+        this.clientDataProvider = clientDataProvider;
     }
 
     public string GetResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
         var claimsToInclude= new string[]{ "aud", "iss", "idp", "oid", "sub", "tid", "ver" };
+        var user = clientDataProvider.ValidateSecret(tokenRequest.client_id, tokenRequest.client_secret);
         var authUser = new AuthUser
         {
             AppId= tokenRequest.client_id,
-            Id = Guid.NewGuid().ToString(),
-            UserId = Guid.NewGuid().ToString(),
+            Id = user.Id,
+            UserId = user.Id,
+            Email = user.Email,
+            Name = user.Name,
             ClientId = tokenRequest.client_id,
         };
-        var claims = claimsProvider.BuildClaims(claimsToInclude, requestCtx, authUser);
+        var claims = BuildClaims(claimsToInclude, requestCtx, authUser);
         ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims);
         return _jwtUtils.GenerateToken(claimsIdentity, requestCtx);
     }
@@ -331,51 +435,6 @@ public static class StreamExtentions
     }
 }
 
-public class ClaimsProvider
-{
-    delegate Claim claimBuilder(string name, AuthRequestContext request, AuthUser user);
-
-    private static readonly Dictionary<string, claimBuilder> _claimBuilders = new()
-    {
-        {"sub", (name, req, user)=> { return new Claim(name, user.UserId??user.Id); } },
-        {"oid", (name, req, user)=> { return new Claim(name, user.Id); } },
-        {"name", (name, req, user)=> { return new Claim(name, user.Name); } },
-        {"family_name", (name, req, user)=> { return new Claim(name, user.FamilyName); } },
-        {"given_name", (name, req, user)=> { return new Claim(name, user.GivenName); } },
-        {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"unique_name", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"preferred_username", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"nonce", (name, req, user)=> { return new Claim(name, user.Nonce); } },
-        {"roles", (name, req, user)=> { return new Claim(name, user.Roles); } },
-        {"appid", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
-        {"aud", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
-
-        {"tid", (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
-        {"ver", (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
-        //{"iss", (name, req, user)=> { return new Claim(name, req.Issuer); } },
-        {"idp", (name, req, user)=> { return new Claim(name, req.Issuer); } },
-    };
-    public ClaimsProvider()
-    {
-
-    }
-
-    internal IEnumerable<Claim> BuildClaims(string[] includeClaims, AuthRequestContext request, AuthUser user)
-    {
-        if (includeClaims?.Length > 0)
-        {
-            return includeClaims
-                .Where(x => _claimBuilders.ContainsKey(x))
-                .Select(x => _claimBuilders[x](x, request, user))
-                .Where(x => !string.IsNullOrEmpty(x.Value))
-                .ToList();     
-        }
-
-        return new List<Claim>();
-    }
-
-
-}
 
 internal class AuthUser
 {
@@ -389,6 +448,6 @@ internal class AuthUser
     public string ClientId { get; set; }
     public string AppId { get; set; }
     public string Nonce { get; set; }
-    public string Roles { get; set; }
+    public string[] Roles { get; set; }
 
 }
