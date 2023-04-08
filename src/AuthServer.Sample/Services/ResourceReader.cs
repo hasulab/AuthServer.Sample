@@ -97,10 +97,10 @@ public class OAuth2Token
         var claimsToInclude= new string[]{ "aud", "iss", "idp", "oid", "sub", "tid", "ver" };
         var authUser = new AuthUser
         {
-            AppId=Guid.NewGuid().ToString(),
+            AppId= tokenRequest.client_id,
             Id = Guid.NewGuid().ToString(),
             UserId = Guid.NewGuid().ToString(),
-            ClientId = Guid.NewGuid().ToString(),
+            ClientId = tokenRequest.client_id,
         };
         var claims = claimsProvider.BuildClaims(claimsToInclude, requestCtx, authUser);
         ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims);
@@ -223,7 +223,8 @@ public class AppSettings
 
 public interface IJwtUtils
 {
-    public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext);
+    public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext,
+        DateTime? issuedAt = null, DateTime? notBefore = null, DateTime? expires = null);
     public bool ValidateToken(string token, AuthRequestContext requestContext);
 }
 
@@ -236,9 +237,10 @@ public class JwtUtils : IJwtUtils
         _appSettings = appSettings.Value;
     }
 
-    public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext)
+    public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext,
+        DateTime? issuedAt = null, DateTime? notBefore = null , DateTime? expires = null)
     {
-        // generate token that is valid for 7 days
+        // generate token that is valid for 30 minutes
         var tokenHandler = new JwtSecurityTokenHandler();
         var secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.SecretKey));
         var signingCredentials = new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
@@ -249,18 +251,18 @@ public class JwtUtils : IJwtUtils
         //X509SecurityKey key = new X509SecurityKey(cert);
         //signingCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
 
-        var nowDateTimeoffset = DateTimeOffset.UtcNow;
-        var nowUnix = nowDateTimeoffset.ToUnixTimeSeconds;
-        var nowUtc = nowDateTimeoffset.UtcDateTime;
+        var requestTime = requestContext.RequestTime;// DateTimeOffset.UtcNow;
+        var nowUnix = requestTime.ToUnixTimeSeconds;
+        var nowUtc = requestTime.UtcDateTime;
 
         var tokenDescriptor = new SecurityTokenDescriptor()
         {
-            Audience = "https://TestValidAudience",
-            Issuer = "http://TestValidIssuer",
+            Issuer = requestContext.Issuer,
+            //Audience = requestContext.Issuer,
             Subject = claimsIdentity,
-            NotBefore = nowUtc,
-            IssuedAt = nowUtc,
-            Expires = nowUtc.AddMinutes(10),
+            NotBefore = notBefore ?? requestTime.UtcDateTime,
+            IssuedAt = issuedAt ?? requestTime.UtcDateTime,
+            Expires = expires ?? requestTime.UtcDateTime.AddMinutes(30),
             //EncryptingCredentials = encryptionCredentials,
             SigningCredentials = signingCredentials
         };
@@ -279,13 +281,13 @@ public class JwtUtils : IJwtUtils
         {
             tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
-                ValidIssuer = "TestValidIssuer",
-                ValidAudience = "TestValidAudience",
+                ValidIssuer = requestContext.Issuer,
                 ValidateIssuerSigningKey = true,
                 ValidateLifetime = true,
                 RequireExpirationTime = true,
                 ValidateIssuer = true,
-                ValidateAudience = true,
+                //ValidAudience = requestContext.Issuer,
+                //ValidateAudience = true,
                 IssuerSigningKey = secret,
                 TokenDecryptionKey = secret,
                 // set clockskew to zero so tokens expire exactly at token expiration time (instead of 5 minutes later)
@@ -343,14 +345,14 @@ public class ClaimsProvider
         {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
         {"unique_name", (name, req, user)=> { return new Claim(name, user.Email); } },
         {"preferred_username", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"appid", (name, req, user)=> { return new Claim(name, user.AppId); } },
-        {"aud", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
         {"nonce", (name, req, user)=> { return new Claim(name, user.Nonce); } },
         {"roles", (name, req, user)=> { return new Claim(name, user.Roles); } },
+        {"appid", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+        {"aud", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
 
         {"tid", (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
         {"ver", (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
-        {"iss", (name, req, user)=> { return new Claim(name, req.Issuer); } },
+        //{"iss", (name, req, user)=> { return new Claim(name, req.Issuer); } },
         {"idp", (name, req, user)=> { return new Claim(name, req.Issuer); } },
     };
     public ClaimsProvider()
