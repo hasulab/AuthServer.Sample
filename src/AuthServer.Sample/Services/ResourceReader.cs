@@ -181,12 +181,17 @@ public class OAuthErrorResponse
 {
     public static class Errors
     {
+        public const string invalid_request = "invalid_request";
+        public const string unauthorized_client = "unauthorized_client";
+        public const string access_denied = "access_denied";
+        public const string unsupported_response_type = "unsupported_response_type";
+        public const string server_error = "server_error";
+        public const string temporarily_unavailable = "temporarily_unavailable";
+        public const string invalid_resource = "invalid_resource";
         public const string invalid_grant = "invalid_grant";
         public const string invalid_scope = "invalid_scope";
-        public const string invalid_request = "invalid_request";
         public const string invalid_token = "invalid_token";
         public const string invalid_client = "invalid_client";
-        public const string access_denied = "access_denied";
         public const string user_authentication_required = "user_authentication_required";
     }
     public string error_description { get; set; }
