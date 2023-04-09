@@ -38,8 +38,8 @@ app.MapGet("/", (LinkGenerator linker) =>
        {
            var urls = new Dictionary<string, string?>()
            {
-               { "V1 /.well-known/openid-configuration",linker.GetPathByName("v1-well-known-config", values: new { tenantId = Guid.Empty }) },
-               { "V2 /.well-known/openid-configuration",linker.GetPathByName("v2-well-known-config", values: new { tenantId = Guid.Empty }) },
+               { "V1 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V1EPName, values: new { tenantId = Guid.Empty }) },
+               { "V2 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V2EPName, values: new { tenantId = Guid.Empty }) },
                { "V1 /oauth2/token",linker.GetPathByName("v1-oauth2-token", values: new { tenantId = Guid.Empty }) },
            }
            .Select(x => $"<a href='{x.Value}'>{x.Key}</a>").ToArray();
@@ -48,26 +48,26 @@ app.MapGet("/", (LinkGenerator linker) =>
            return Results.Content($"<html><body></body>{htmlBody}</html>", "text/html; charset=utf-8");
        });
 
-app.MapGet(WellKnownOpenidConfiguration.ConstV1Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
+app.MapGet(WellKnownConfig.V1Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
 {
     var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
     return Results.Text(configuration.GetV1(siteName, tenantId), "application/json"); 
 })
-    .WithName("v1-well-known-config");
+    .WithName(WellKnownConfig.V1EPName);
 
-app.MapGet(WellKnownOpenidConfiguration.ConstV2Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
+app.MapGet(WellKnownConfig.V2Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
 {
     var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
     return Results.Text(configuration.GetV2(siteName, tenantId), "application/json");
 })
-    .WithName("v2-well-known-config");
+    .WithName(WellKnownConfig.V2EPName);
 
-app.MapPost(OAuth2Token.ConstV1Url, (HttpContext context, OAuth2Token tokenService, OAuthTokenRequest tokenRequest) =>
+app.MapPost(Token.V1Url, (HttpContext context, OAuth2Token tokenService, OAuthTokenRequest tokenRequest) =>
 {
     var requestConext = context.GetRequestContext();
-    return Results.Text(tokenService.GetResponse(tokenRequest, requestConext), "application/json");
+    return Results.Text(tokenService.GenerateResponse(tokenRequest, requestConext), "application/json");
 })
-    .WithName("v1-oauth2-token");
+    .WithName(Token.V1EPName);
 
 app.Use(async (context, next) =>
 {

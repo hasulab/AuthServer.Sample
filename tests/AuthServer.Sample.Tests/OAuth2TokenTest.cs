@@ -35,7 +35,9 @@ namespace AuthServer.Sample.Tests
             var moqHttpContext = new Mock<HttpContext>();
             var moqHttpRequest = new Mock<HttpRequest>();
             var moqFeatures = new Mock<IFeatureCollection>();
+            var moqClientDataProvider = new Mock<ClientDataProvider>();
             var features = new TestFeatureCollection();
+
 
             moqHttpContext.Setup(x => x.Request).Returns(() => moqHttpRequest.Object);
             moqHttpContext.Setup(x => x.Features).Returns(() => features);
@@ -47,14 +49,19 @@ namespace AuthServer.Sample.Tests
             var ipAddr = new byte[4] { 192, 168, 255, 251 };
             moqHttpContext.Setup(x => x.Connection.RemoteIpAddress).Returns(() => new System.Net.IPAddress(ipAddr));
 
+            moqClientDataProvider
+                .Setup(x => x.ValidateSecret(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(() => new ClientDataProvider.StoredUser { Id = "TestId1" });
+
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
             var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
             var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
-            var service = new OAuth2Token(util, null);
+            var service = new OAuth2Token(util, moqClientDataProvider.Object);
             var tokenRequest = new OAuthTokenRequest();
-            var jwtToken = service.GetResponse(tokenRequest, requestContext);
+            var jwtToken = service.GenerateResponse(tokenRequest, requestContext);
 
         }
+
     }
 }

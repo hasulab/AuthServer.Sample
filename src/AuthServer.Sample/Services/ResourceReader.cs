@@ -1,4 +1,6 @@
-﻿using AuthServer.Sample.Extentions;
+﻿using AuthServer.Sample.Exceptions;
+using AuthServer.Sample.Extentions;
+using AuthServer.Sample.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -8,7 +10,6 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
-using static AuthServer.Sample.Extentions.HttpContextExtensions;
 
 namespace AuthServer.Sample.Services;
 
@@ -30,12 +31,6 @@ public class ResourceReader
 
 public class WellKnownOpenidConfiguration
 {
-    //"/.well-known/openid-configuration"
-    public const string ConstV1Url = "/{tenantId}/.well-known/openid-configuration";
-    public const string ConstV2Url = "/{tenantId}/v2.0/.well-known/openid-configuration";
-    private const string ConstV1ConfigresourceName = "AuthServer.Sample.Resources.openid-configuration.json";
-    private const string ConstV2ConfigresourceName = "AuthServer.Sample.Resources.V2.openid-configuration.json";
-
     private readonly ResourceReader _resourceReader;
 
     public WellKnownOpenidConfiguration(ResourceReader resourceReader)
@@ -45,12 +40,12 @@ public class WellKnownOpenidConfiguration
 
     public string GetV1(string endpoint, string tenantId)
     {
-        return GetResourceText(ConstV1ConfigresourceName, endpoint, tenantId);
+        return GetResourceText(WellKnownConfig.V1ConfigresourceName, endpoint, tenantId);
     }
 
     public string GetV2(string endpoint, string tenantId)
     {
-        return GetResourceText(ConstV2ConfigresourceName, endpoint, tenantId);
+        return GetResourceText(WellKnownConfig.V2ConfigresourceName, endpoint, tenantId);
     }
 
     private string GetResourceText(string resourceName, string endpoint, string tenantId)
@@ -128,7 +123,7 @@ public class ClientDataProvider
         public string UserName { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
-        public string GivenName { get; set; }
+        public string FirstName { get; set; }
         public string SurName { get; set; }
         public string[] Roles { get; set; }
     }
@@ -136,10 +131,6 @@ public class ClientDataProvider
 
 public class OAuth2Token
 {
-    //"/oauth2/token"
-    public const string ConstV1Url = "/{tenantId}/oauth2/token";
-    public const string ConstV2Url = "/{tenantId}/oauth2/v2.0/token";
-
     private readonly IJwtUtils _jwtUtils;
     private readonly ClientDataProvider clientDataProvider;
 
@@ -147,23 +138,23 @@ public class OAuth2Token
 
     private static readonly Dictionary<string, claimBuilder> _claimBuilders = new()
     {
-        {"sub", (name, req, user)=> { return new Claim(name, user.UserId??user.Id); } },
-        {"oid", (name, req, user)=> { return new Claim(name, user.Id); } },
-        {"name", (name, req, user)=> { return new Claim(name, user.Name); } },
-        {"family_name", (name, req, user)=> { return new Claim(name, user.FamilyName); } },
-        {"given_name", (name, req, user)=> { return new Claim(name, user.GivenName); } },
-        {"email", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"unique_name", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"preferred_username", (name, req, user)=> { return new Claim(name, user.Email); } },
-        {"nonce", (name, req, user)=> { return new Claim(name, user.Nonce); } },
-        //{"roles", (name, req, user)=> { return new Claim(name, user.Roles); } },
-        {"appid", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
-        {"aud", (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+        {Claims.sub, (name, req, user)=> { return new Claim(name, user.UserId??user.Id); } },
+        {Claims.oid, (name, req, user)=> { return new Claim(name, user.Id); } },
+        {Claims.name, (name, req, user)=> { return new Claim(name, user.Name); } },
+        {Claims.family_name, (name, req, user)=> { return new Claim(name, user.FamilyName); } },
+        {Claims.given_name, (name, req, user)=> { return new Claim(name, user.GivenName); } },
+        {Claims.email, (name, req, user)=> { return new Claim(name, user.Email); } },
+        {Claims.unique_name, (name, req, user)=> { return new Claim(name, user.Email); } },
+        {Claims.preferred_username, (name, req, user)=> { return new Claim(name, user.Email); } },
+        {Claims.nonce, (name, req, user)=> { return new Claim(name, user.Nonce); } },
+        //{Claims.roles, (name, req, user)=> { return new Claim(name, user.Roles); } },
+        {Claims.appid, (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+        {Claims.aud, (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
 
-        {"tid", (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
-        {"ver", (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
-        //{"iss", (name, req, user)=> { return new Claim(name, req.Issuer); } },
-        {"idp", (name, req, user)=> { return new Claim(name, req.Issuer); } },
+        {Claims.tid, (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
+        {Claims.ver, (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
+        //{Claims.iss, (name, req, user)=> { return new Claim(name, req.Issuer); } },
+        {Claims.idp, (name, req, user)=> { return new Claim(name, req.Issuer); } },
     };
 
     internal IEnumerable<Claim> BuildClaims(string[] includeClaims, AuthRequestContext request, AuthUser user)
@@ -193,45 +184,76 @@ public class OAuth2Token
         this.clientDataProvider = clientDataProvider;
     }
 
-    public string GetResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
+    public string GenerateResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
-        var claimsToInclude= new string[]{ "aud", "iss", "idp", "oid", "sub", "tid", "ver" };
+        ClaimsIdentity claimsIdentity;
+        if (tokenRequest.grant_type == GrantType.client_credentials)
+        {
+            claimsIdentity = BuildAccessToken(tokenRequest, requestCtx);
+        }else if (tokenRequest.grant_type == GrantType.password)
+        {
+            claimsIdentity = BuildIdToken(tokenRequest, requestCtx);
+        }
+        else
+        {
+            throw new AuthException
+            {
+                OAuthError = new OAuthErrorResponse
+                {
+                    error= Errors.invalid_grant,
+                    error_description= $"Invalid {tokenRequest.grant_type} grant_type"
+                }
+            };
+        }
+        return _jwtUtils.GenerateToken(claimsIdentity, requestCtx);
+    }
+
+    static readonly string[] IdTokenClaims = new string[]
+    {
+        Claims.aud, Claims.iss, Claims.iat, Claims.nbf, Claims.exp, Claims.aio, Claims.amr, Claims.rsa,
+        Claims.name, Claims.email, Claims.family_name, Claims.given_name, Claims.idp,
+        Claims.ipaddr,Claims.nonce, Claims.oid, Claims.rh, Claims.sub, Claims.tid, Claims.unique_name, Claims.uti, Claims.ver
+    };
+
+    private ClaimsIdentity BuildIdToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
+    {
         var user = clientDataProvider.ValidateSecret(tokenRequest.client_id, tokenRequest.client_secret);
         var authUser = new AuthUser
         {
-            AppId= tokenRequest.client_id,
+            AppId = tokenRequest.client_id,
             Id = user.Id,
             UserId = user.Id,
             Email = user.Email,
             Name = user.Name,
+            FamilyName = user.SurName,
+            GivenName = user.FirstName,
+            Roles = user.Roles,
             ClientId = tokenRequest.client_id,
         };
-        var claims = BuildClaims(claimsToInclude, requestCtx, authUser);
-        ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims);
-        return _jwtUtils.GenerateToken(claimsIdentity, requestCtx);
+
+        var claims = BuildClaims(IdTokenClaims, requestCtx, authUser);
+        return new ClaimsIdentity(claims);
     }
 
+    static readonly string[] AccesskenClaims = new string[] {
+        Claims.aud, Claims.iss, Claims.idp, Claims.oid, Claims.sub, Claims.tid, Claims.ver
+    };
+    private ClaimsIdentity BuildAccessToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
+    {
+        var user = clientDataProvider.ValidateSecret(tokenRequest.client_id, tokenRequest.client_secret);
+        var authUser = new AuthUser
+        {
+            AppId = tokenRequest.client_id,
+            Id = user.Id,
+            UserId = user.Id,
+            ClientId = tokenRequest.client_id,
+        };
+        var claims = BuildClaims(AccesskenClaims, requestCtx, authUser);
+        return new ClaimsIdentity(claims);
+    }
 }
 public class OAuthTokenRequest
-{
-    public static class GrantType
-    {
-        public const string password = "password";
-        public const string client_credentials = "client_credentials";
-    }
-    public static class ResponseType
-    {
-        public const string id_token = "id_token";
-        public const string code = "code";
-        public const string token = "token";
-        public const string access_token = "access_token";
-    }
-    public static class ResponseMode
-    {
-        public const string query = "query";
-        public const string fragment = "fragment";
-        public const string form_post = "form_post";
-    }
+{    
     public string grant_type { get; set; } = GrantType.client_credentials;
 
     //client_id is AppId in  jwt
@@ -259,7 +281,7 @@ public abstract class OAuthTokenResponse
 {
     public string code { get; set; }
     public string state { get; set; }
-    public string token_type { get; set; } = "Bearer";
+    public string token_type { get; set; } = TokenType.Bearer;
     public string expires_in { get; set; }
     public string ext_expires_in { get; set; }
     public string expires_on { get; set; }
@@ -283,21 +305,7 @@ public abstract class OAuthTokenResponse
 //GET http://localhost?error=access_denied&error_description=the+user+canceled+the+authentication
 public class OAuthErrorResponse
 {
-    public static class Errors
-    {
-        public const string invalid_request = "invalid_request";
-        public const string unauthorized_client = "unauthorized_client";
-        public const string access_denied = "access_denied";
-        public const string unsupported_response_type = "unsupported_response_type";
-        public const string server_error = "server_error";
-        public const string temporarily_unavailable = "temporarily_unavailable";
-        public const string invalid_resource = "invalid_resource";
-        public const string invalid_grant = "invalid_grant";
-        public const string invalid_scope = "invalid_scope";
-        public const string invalid_token = "invalid_token";
-        public const string invalid_client = "invalid_client";
-        public const string user_authentication_required = "user_authentication_required";
-    }
+    
     public string error_description { get; set; }
     public string error { get; set; }
     public int[] error_codes { get; set; }
@@ -312,9 +320,6 @@ public class OAuthErrorResponse
 
 public class OAuth2Authorize
 {
-    //"/oauth2/authorize"
-    public const string ConstV1Url = "/{tenantId}/oauth2/authorize";
-    public const string ConstV2Url = "/{tenantId}/oauth2/v2.0/authorize";
 }
 
 
@@ -436,18 +441,4 @@ public static class StreamExtentions
 }
 
 
-internal class AuthUser
-{
-    public string Id { get; set; }
-    public string UserId { get; set; }
-    public string Name { get; set; }
-    public string Email { get; set; }
-    public string FamilyName { get; set; }
-    public string GivenName { get; set; }
 
-    public string ClientId { get; set; }
-    public string AppId { get; set; }
-    public string Nonce { get; set; }
-    public string[] Roles { get; set; }
-
-}
