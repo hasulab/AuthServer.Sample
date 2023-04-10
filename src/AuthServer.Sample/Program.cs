@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
 
@@ -23,7 +24,11 @@ builder.Services
     })
     ;
 
+builder.Services.AddOptions<AppSettings>().BindConfiguration("");
+
 var app = builder.Build();
+
+var appSettings = app.Services.GetService<IOptions<AppSettings>>();
 
 var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
 //Microsoft.AspNetCore.Http.DefaultHttpContext
@@ -75,7 +80,7 @@ app.MapGet(WellKnownConfig.V2Url, (WellKnownOpenidConfiguration configuration, H
 
 app.MapPost(Token.V1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, AuthRequestContext requestConext) =>
 {
-    return Results.Text(tokenService.GenerateResponse(tokenRequest, requestConext), "application/json");
+    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
     .WithName(Token.V1EPName);
 

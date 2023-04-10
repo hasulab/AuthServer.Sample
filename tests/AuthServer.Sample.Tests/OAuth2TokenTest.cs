@@ -16,7 +16,9 @@ namespace AuthServer.Sample.Tests
         {
             var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
             AuthRequestContext requestContext = new ();
-            var token = util.GenerateToken(new ClaimsIdentity(new List<Claim> { new Claim("Id", "TestId") }), requestContext);
+            var token = util.GenerateToken(new ClaimsIdentity(new List<Claim> { new Claim("Id", "TestId") }), requestContext,
+                out long expiresIn);
+
         }
         class TestOptions : IOptions<AppSettings>
         {

@@ -184,7 +184,7 @@ public class OAuth2Token
         this.clientDataProvider = clientDataProvider;
     }
 
-    public string GenerateResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
+    public OAuthTokenResponse GenerateResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
         ClaimsIdentity claimsIdentity;
         if (tokenRequest.grant_type == GrantType.client_credentials)
@@ -205,7 +205,13 @@ public class OAuth2Token
                 }
             };
         }
-        return _jwtUtils.GenerateToken(claimsIdentity, requestCtx);
+        var access_token = _jwtUtils.GenerateToken(claimsIdentity, requestCtx, out long expiresIn);
+        return new OAuthTokenResponse
+        {
+            access_token=access_token,
+            expires_in=expiresIn.ToString(),
+            ext_expires_in= expiresIn.ToString()
+        };
     }
 
     static readonly string[] IdTokenClaims = new string[]
@@ -277,7 +283,7 @@ public class OAuthTokenRequest
     public string code_challenge_method { get; set; }
 }
 
-public abstract class OAuthTokenResponse
+public class OAuthTokenResponse
 {
     public string code { get; set; }
     public string state { get; set; }
@@ -333,7 +339,8 @@ public class AppSettings
 public interface IJwtUtils
 {
     public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext,
-        DateTime? issuedAt = null, DateTime? notBefore = null, DateTime? expires = null);
+        out long expiresIn,
+        DateTime? issuedAt = null, DateTime? notBefore = null, DateTime? expires = null, double defaultExpiryMinutes = 30);
     public bool ValidateToken(string token, AuthRequestContext requestContext);
 }
 
@@ -347,7 +354,8 @@ public class JwtUtils : IJwtUtils
     }
 
     public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext,
-        DateTime? issuedAt = null, DateTime? notBefore = null , DateTime? expires = null)
+        out long expiresIn,
+        DateTime? issuedAt = null, DateTime? notBefore = null , DateTime? expires = null, double defaultExpiryMinutes = 30)
     {
         // generate token that is valid for 30 minutes
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -364,14 +372,20 @@ public class JwtUtils : IJwtUtils
         var nowUnix = requestTime.ToUnixTimeSeconds;
         var nowUtc = requestTime.UtcDateTime;
 
+        notBefore ??= requestTime.UtcDateTime;
+        issuedAt ??= requestTime.UtcDateTime;
+        expires ??= requestTime.UtcDateTime.AddMinutes(defaultExpiryMinutes);
+
+        expiresIn = (long)(expires.Value - DateTime.UtcNow).TotalSeconds;
+
         var tokenDescriptor = new SecurityTokenDescriptor()
         {
             Issuer = requestContext.Issuer,
             //Audience = requestContext.Issuer,
             Subject = claimsIdentity,
-            NotBefore = notBefore ?? requestTime.UtcDateTime,
-            IssuedAt = issuedAt ?? requestTime.UtcDateTime,
-            Expires = expires ?? requestTime.UtcDateTime.AddMinutes(30),
+            NotBefore = notBefore,
+            IssuedAt = issuedAt,
+            Expires = expires,
             //EncryptingCredentials = encryptionCredentials,
             SigningCredentials = signingCredentials
         };
