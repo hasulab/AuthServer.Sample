@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace AuthServer.Sample.Services;
@@ -190,7 +191,8 @@ public class OAuth2Token
         if (tokenRequest.grant_type == GrantType.client_credentials)
         {
             claimsIdentity = BuildAccessToken(tokenRequest, requestCtx);
-        }else if (tokenRequest.grant_type == GrantType.password)
+        }
+        else if (tokenRequest.grant_type == GrantType.password)
         {
             claimsIdentity = BuildIdToken(tokenRequest, requestCtx);
         }
@@ -285,17 +287,37 @@ public class OAuthTokenRequest
 
 public class OAuthTokenResponse
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string code { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string state { get; set; }
+
     public string token_type { get; set; } = TokenType.Bearer;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string expires_in { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string ext_expires_in { get; set; }
+
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string expires_on { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string not_before { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string scope { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string id_token { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string resource { get; set; } = "00000002-0000-0000-c000-000000000000";
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string access_token { get; set; }
     /*
      "token_type": "Bearer",
