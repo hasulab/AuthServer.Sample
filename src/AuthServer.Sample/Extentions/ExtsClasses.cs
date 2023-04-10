@@ -1,6 +1,8 @@
 ﻿using AuthServer.Sample.Services;
 using System.Text.RegularExpressions;
 using System.Text;
+using AuthServer.Sample.Models;
+using AuthServer.Sample.Exceptions;
 
 namespace AuthServer.Sample.Extentions;
 
@@ -87,16 +89,20 @@ public static class HttpContextExtensions
     }
 }
 
-public record class AuthRequestContext
+public static class NullObjectCheck
 {
-    public string IPAddress { get; internal set; }
-    public string Path { get; internal set; }
-    public Guid TenantId { get; internal set; }
-    public bool HasTenantId { get; internal set; }
-    public float Version { get; internal set; }
-    public bool HasVersion { get; internal set; }
-    public string SiteName { get; internal set; }
-    public string Issuer { get; internal set; }
-    public DateTimeOffset RequestTime { get; internal set; } = DateTimeOffset.UtcNow;
-
+    public static void ThrowAuthExceptionIfNull(this object obj, string errorCode, string errorDescription)
+    {
+        if (obj == null)
+        {
+            throw new AuthException
+            {
+                OAuthError = new OAuthErrorResponse
+                {
+                    error = errorCode,
+                    error_description = errorDescription
+                }
+            };
+        }
+    }
 }

@@ -84,6 +84,7 @@ public class Constants
             public const string email = "email";
             public const string family_name = "family_name";
             public const string given_name = "given_name";
+            public const string roles = "roles";
             public const string idp = "idp";
             public const string ipaddr = "ipaddr";
             public const string name = "name";

@@ -6,3 +6,4 @@ global using Claims = AuthServer.Sample.Constants.Auth.Claims;
 global using Errors = AuthServer.Sample.Constants.Auth.Errors;
 global using GrantType = AuthServer.Sample.Constants.Auth.GrantType;
 global using TokenType = AuthServer.Sample.Constants.Auth.TokenType;
+global using ResponseType = AuthServer.Sample.Constants.Auth.ResponseType;

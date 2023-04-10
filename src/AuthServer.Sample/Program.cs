@@ -1,4 +1,5 @@
 using AuthServer.Sample.Extentions;
+using AuthServer.Sample.Models;
 using AuthServer.Sample.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing.Patterns;

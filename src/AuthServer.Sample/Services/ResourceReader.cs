@@ -3,6 +3,7 @@ using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Reflection;
@@ -11,6 +12,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using static AuthServer.Sample.Constants.Auth;
 
 namespace AuthServer.Sample.Services;
 
@@ -100,7 +103,24 @@ public class ClientDataProvider
         };
         return list.Any(x => x == appId);
     }
-    public virtual StoredUser ValidateSecret(string clientId, string clientSecret)
+    
+    public virtual string[] GetResponseTypes(Guid tenantId, OAuthTokenRequest tokenRequest)
+    {
+        var response_type = string.Empty;
+        switch (tokenRequest.grant_type)
+        {
+            case GrantType.client_credentials:
+                response_type = tokenRequest.response_type ?? ResponseType.access_token;
+                break;
+            case GrantType.password:
+                response_type = tokenRequest.response_type ?? ResponseType.id_token;
+                break;
+        }
+
+        return response_type.Split('+',' ');
+    }
+
+    public virtual StoredUser ValidateSecret(Guid tenantId, OAuthTokenRequest tokenRequest)
     {
         return new StoredUser
         {
@@ -108,7 +128,7 @@ public class ClientDataProvider
         };
     }
 
-    public virtual StoredUser ValidateUserPassword(string clientId, string username, string password)
+    public virtual StoredUser ValidateUserPassword(Guid tenantId, OAuthTokenRequest tokenRequest)
     {
         return new StoredUser
         {
@@ -135,30 +155,41 @@ public class OAuth2Token
     private readonly IJwtUtils _jwtUtils;
     private readonly ClientDataProvider clientDataProvider;
 
-    delegate Claim claimBuilder(string name, AuthRequestContext request, AuthUser user);
+    delegate ClaimRecord claimBuilder(string name, AuthRequestContext request, AuthUser user);
 
     private static readonly Dictionary<string, claimBuilder> _claimBuilders = new()
     {
-        {Claims.sub, (name, req, user)=> { return new Claim(name, user.UserId??user.Id); } },
-        {Claims.oid, (name, req, user)=> { return new Claim(name, user.Id); } },
-        {Claims.name, (name, req, user)=> { return new Claim(name, user.Name); } },
-        {Claims.family_name, (name, req, user)=> { return new Claim(name, user.FamilyName); } },
-        {Claims.given_name, (name, req, user)=> { return new Claim(name, user.GivenName); } },
-        {Claims.email, (name, req, user)=> { return new Claim(name, user.Email); } },
-        {Claims.unique_name, (name, req, user)=> { return new Claim(name, user.Email); } },
-        {Claims.preferred_username, (name, req, user)=> { return new Claim(name, user.Email); } },
-        {Claims.nonce, (name, req, user)=> { return new Claim(name, user.Nonce); } },
-        //{Claims.roles, (name, req, user)=> { return new Claim(name, user.Roles); } },
-        {Claims.appid, (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
-        {Claims.aud, (name, req, user)=> { return new Claim(name, user.AppId ?? user.ClientId); } },
+        {Claims.sub, (name, req, user)=> { return new ClaimRecord(name, user.UserId??user.Id); } },
+        {Claims.oid, (name, req, user)=> { return new ClaimRecord(name, user.Id); } },
+        {Claims.name, (name, req, user)=> { return new ClaimRecord(name, user.Name); } },
+        {Claims.family_name, (name, req, user)=> { return new ClaimRecord(name, user.FamilyName); } },
+        {Claims.given_name, (name, req, user)=> { return new ClaimRecord(name, user.GivenName); } },
+        {Claims.email, (name, req, user)=> { return new ClaimRecord(name, user.Email); } },
+        {Claims.unique_name, (name, req, user)=> { return new ClaimRecord(name, user.Email); } },
+        {Claims.preferred_username, (name, req, user)=> { return new ClaimRecord(name, user.Email); } },
+        {Claims.nonce, (name, req, user)=> { return new ClaimRecord(name, user.Nonce); } },
+        //{Claims.roles, (name, req, user)=> { return new ClaimRecord(name, user.Roles); } },
+        {Claims.appid, (name, req, user)=> { return new ClaimRecord(name, user.AppId ?? user.ClientId); } },
+        {Claims.aud, (name, req, user)=> { return new ClaimRecord(name, user.AppId ?? user.ClientId); } },
 
-        {Claims.tid, (name, req, user)=> { return new Claim(name, req.TenantId.ToString()); } },
-        {Claims.ver, (name, req, user)=> { return new Claim(name, req.Version.ToString("F1")); } },
-        //{Claims.iss, (name, req, user)=> { return new Claim(name, req.Issuer); } },
-        {Claims.idp, (name, req, user)=> { return new Claim(name, req.Issuer); } },
+        {Claims.tid, (name, req, user)=> { return new ClaimRecord(name, req.TenantId.ToString()); } },
+        {Claims.ver, (name, req, user)=> { return new ClaimRecord(name, req.Version.ToString("F1")); } },
+        //{Claims.iss, (name, req, user)=> { return new ClaimRecord(name, req.Issuer); } },
+        {Claims.idp, (name, req, user)=> { return new ClaimRecord(name, req.Issuer); } },
     };
 
-    internal IEnumerable<Claim> BuildClaims(string[] includeClaims, AuthRequestContext request, AuthUser user)
+    record ClaimRecord
+    {
+        public ClaimRecord(string key, string value)
+        {
+            Key = key;
+            Value = value;
+        }
+        public string Key { get;  }
+        public string Value { get;}
+    }
+
+    internal static IEnumerable<Claim> BuildClaims(string[] includeClaims, AuthRequestContext request, AuthUser user)
     {
         if (includeClaims?.Length > 0)
         {
@@ -166,14 +197,14 @@ public class OAuth2Token
                 .Where(x => _claimBuilders.ContainsKey(x))
                 .Select(x => _claimBuilders[x](x, request, user))
                 .Where(x => !string.IsNullOrEmpty(x.Value))
-                .ToList();
+            .ToList();
 
-            if (includeClaims.Contains("roles") && user.Roles?.Length > 0)
+            if (includeClaims.Contains(Claims.roles) && user.Roles?.Length > 0)
             {
-                claims.AddRange(user.Roles.Select(x => new Claim("roles", x))); 
+                claims.AddRange(user.Roles.Select(x => new ClaimRecord(Claims.roles, x))); 
             }
 
-            return claims;
+            return claims.Select(x => new Claim(x.Key, x.Value)).ToList();
         }
 
         return new List<Claim>();
@@ -185,16 +216,25 @@ public class OAuth2Token
         this.clientDataProvider = clientDataProvider;
     }
 
+    delegate void UpdateToken(IJwtUtils jwtUtils, OAuthTokenResponse response, AuthUser authUser, AuthRequestContext requestCtx);
+
+    private readonly Dictionary<string, UpdateToken> _tokenUpdaters = new()
+    {
+        { ResponseType.token,(jwtUtils, res,user, ctx)=> { UpdateAccessToken(jwtUtils, res,user,ctx); } },
+        { ResponseType.access_token,(jwtUtils, res,user, ctx)=> { UpdateAccessToken(jwtUtils, res,user,ctx); } },
+        { ResponseType.id_token,(jwtUtils, res,user, ctx)=> { UpdateIdToken(jwtUtils, res,user,ctx); } }
+    };
+
     public OAuthTokenResponse GenerateResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
-        ClaimsIdentity claimsIdentity;
+        AuthUser authUser;
         if (tokenRequest.grant_type == GrantType.client_credentials)
         {
-            claimsIdentity = BuildAccessToken(tokenRequest, requestCtx);
+            authUser = BuildAccessToken(tokenRequest, requestCtx);
         }
         else if (tokenRequest.grant_type == GrantType.password)
         {
-            claimsIdentity = BuildIdToken(tokenRequest, requestCtx);
+            authUser = BuildIdToken(tokenRequest, requestCtx);
         }
         else
         {
@@ -207,26 +247,24 @@ public class OAuth2Token
                 }
             };
         }
-        var access_token = _jwtUtils.GenerateToken(claimsIdentity, requestCtx, out long expiresIn);
-        return new OAuthTokenResponse
-        {
-            access_token=access_token,
-            expires_in=expiresIn.ToString(),
-            ext_expires_in= expiresIn.ToString()
-        };
+
+        var responseTypes = clientDataProvider.GetResponseTypes(requestCtx.TenantId ,tokenRequest);
+        var tokenResponse = new OAuthTokenResponse();
+        responseTypes
+            .Where(x => _tokenUpdaters.ContainsKey(x))
+            .ToList()
+            .ForEach(x => _tokenUpdaters[x](_jwtUtils, tokenResponse, authUser, requestCtx));
+
+        return tokenResponse;
     }
 
-    static readonly string[] IdTokenClaims = new string[]
+    private AuthUser BuildIdToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
-        Claims.aud, Claims.iss, Claims.iat, Claims.nbf, Claims.exp, Claims.aio, Claims.amr, Claims.rsa,
-        Claims.name, Claims.email, Claims.family_name, Claims.given_name, Claims.idp,
-        Claims.ipaddr,Claims.nonce, Claims.oid, Claims.rh, Claims.sub, Claims.tid, Claims.unique_name, Claims.uti, Claims.ver
-    };
+        var user = clientDataProvider.ValidateUserPassword(requestCtx.TenantId, tokenRequest);
 
-    private ClaimsIdentity BuildIdToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
-    {
-        var user = clientDataProvider.ValidateSecret(tokenRequest.client_id, tokenRequest.client_secret);
-        var authUser = new AuthUser
+        user.ThrowAuthExceptionIfNull(Errors.invalid_request, "Invalid username or password");
+
+        return new AuthUser
         {
             AppId = tokenRequest.client_id,
             Id = user.Id,
@@ -238,26 +276,55 @@ public class OAuth2Token
             Roles = user.Roles,
             ClientId = tokenRequest.client_id,
         };
-
-        var claims = BuildClaims(IdTokenClaims, requestCtx, authUser);
-        return new ClaimsIdentity(claims);
     }
 
-    static readonly string[] AccesskenClaims = new string[] {
-        Claims.aud, Claims.iss, Claims.idp, Claims.oid, Claims.sub, Claims.tid, Claims.ver
-    };
-    private ClaimsIdentity BuildAccessToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
+    private AuthUser BuildAccessToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
-        var user = clientDataProvider.ValidateSecret(tokenRequest.client_id, tokenRequest.client_secret);
-        var authUser = new AuthUser
+        var user = clientDataProvider.ValidateSecret(requestCtx.TenantId, tokenRequest);
+
+        user.ThrowAuthExceptionIfNull(Errors.invalid_request, "Invalid token or client id");
+
+        return new AuthUser
         {
             AppId = tokenRequest.client_id,
             Id = user.Id,
             UserId = user.Id,
             ClientId = tokenRequest.client_id,
         };
+    }
+
+    static readonly string[] AccesskenClaims = new string[] {
+        Claims.aud, Claims.iss, Claims.idp, Claims.oid, Claims.sub, Claims.tid, Claims.ver
+    };
+
+    private static void UpdateAccessToken(IJwtUtils jwtUtils, OAuthTokenResponse response, AuthUser authUser, AuthRequestContext requestCtx)
+    {
         var claims = BuildClaims(AccesskenClaims, requestCtx, authUser);
-        return new ClaimsIdentity(claims);
+        var claimsIdentity= new ClaimsIdentity(claims);
+        response.access_token = jwtUtils.GenerateToken(claimsIdentity, requestCtx, out long expiresIn);
+        if (response.expires_in == null)
+        {
+            response.expires_in = expiresIn.ToString();
+            response.ext_expires_in = expiresIn.ToString();
+        }
+    }
+
+    static readonly string[] IdTokenClaims = new string[]
+    {
+        Claims.aud, Claims.iss, Claims.iat, Claims.nbf, Claims.exp, Claims.aio, Claims.amr, Claims.rsa,
+        Claims.name, Claims.email, Claims.family_name, Claims.given_name, Claims.idp, Claims.roles,
+        Claims.ipaddr,Claims.nonce, Claims.oid, Claims.rh, Claims.sub, Claims.tid, Claims.unique_name, Claims.uti, Claims.ver
+    };
+    private static void UpdateIdToken(IJwtUtils jwtUtils, OAuthTokenResponse response, AuthUser authUser, AuthRequestContext requestCtx)
+    {
+        var claims = BuildClaims(IdTokenClaims, requestCtx, authUser);
+        var claimsIdentity = new ClaimsIdentity(claims);
+        response.id_token = jwtUtils.GenerateToken(claimsIdentity, requestCtx, out long expiresIn);
+        if (response.expires_in != null)
+        {
+            response.expires_in = expiresIn.ToString();
+            response.ext_expires_in = expiresIn.ToString();
+        }
     }
 }
 public class OAuthTokenRequest
@@ -275,7 +342,7 @@ public class OAuthTokenRequest
     public string code { get; set; }
     public string scope { get; set; }
     public string tenant { get; set; }
-    public string response_type { get; set; } //code id_token
+    public string response_type { get; set; } //code id_token access_token
     public string response_mode { get; set; }//query,fragment,form_post
     public string state { get; set; }
     public string nonce { get; set; }
