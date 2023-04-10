@@ -135,9 +135,11 @@ public class ClientDataProvider
             Id = "10000000-0000-0000-0000-000000000002",
             Name="Test",
             Email="test@test.com",
-            UserName="Test"
+            UserName="Test",
+            Roles= new string[] { "Admin", "Dev", "QA" }
         };
     }
+
     public class StoredUser
     {
         public string Id { get; set; }
@@ -315,6 +317,7 @@ public class OAuth2Token
         Claims.name, Claims.email, Claims.family_name, Claims.given_name, Claims.idp, Claims.roles,
         Claims.ipaddr,Claims.nonce, Claims.oid, Claims.rh, Claims.sub, Claims.tid, Claims.unique_name, Claims.uti, Claims.ver
     };
+
     private static void UpdateIdToken(IJwtUtils jwtUtils, OAuthTokenResponse response, AuthUser authUser, AuthRequestContext requestCtx)
     {
         var claims = BuildClaims(IdTokenClaims, requestCtx, authUser);

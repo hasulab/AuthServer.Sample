@@ -19,6 +19,7 @@ public class Constants
             public const string invalid_client = "invalid_client";
             public const string user_authentication_required = "user_authentication_required";
         }
+
         public static class WellKnownConfig
         {
             //"/.well-known/openid-configuration"
@@ -29,7 +30,6 @@ public class Constants
 
             public const string V1EPName = "v1-well-known-config";
             public const string V2EPName = "v2-well-known-config";
-
         }
 
         public static class Token
@@ -48,11 +48,13 @@ public class Constants
             public const string V1Url = "/{tenantId}/oauth2/authorize";
             public const string V2Url = "/{tenantId}/oauth2/v2.0/authorize";
         }
+
         public static class GrantType
         {
             public const string password = "password";
             public const string client_credentials = "client_credentials";
         }
+
         public static class ResponseType
         {
             public const string id_token = "id_token";
@@ -60,15 +62,16 @@ public class Constants
             public const string token = "token";
             public const string access_token = "access_token";
         }
+
         public static class ResponseMode
         {
             public const string query = "query";
             public const string fragment = "fragment";
             public const string form_post = "form_post";
         }
+
         public static class TokenType { 
             public const string Bearer = "Bearer";
-
         }
 
         public static class Claims
@@ -100,6 +103,4 @@ public class Constants
             public const string ver = "ver";
         }
     }
-
-
 }
