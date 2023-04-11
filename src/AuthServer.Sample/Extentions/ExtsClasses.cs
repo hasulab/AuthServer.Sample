@@ -50,7 +50,7 @@ public static class HttpContextExtensions
             var hasTenantId = TryTenantId(pathSegments, out Guid tenantId);
             var hasVersion = TryVersion(pathSegments, out float version);
 
-            var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
+            var siteName = $"{request.Scheme}://{request.Host.ToUriComponent()}";
             var issuer = hasTenantId ? $"{siteName}/tenantId" : siteName;
             requestContext = new AuthRequestContext
             {

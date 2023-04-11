@@ -16,6 +16,7 @@ builder.Services
     .AddSingleton<ResourceReader>()
     .AddScoped<WellKnownOpenidConfiguration>()
     .AddScoped<OAuth2Token>()
+    .AddScoped<IJwtSigningService, JwtSigningService>()
     .AddScoped<IJwtUtils, JwtUtils>()
     .AddScoped<ClientDataProvider>()
     .AddScoped<AuthRequestContext>((sp) =>
@@ -67,14 +68,14 @@ app.MapGet("/", (LinkGenerator linker) =>
 
 app.MapGet(WellKnownConfig.V1Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
 {
-    var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
+    var siteName = $"{request.Scheme}://{request.Host.ToUriComponent()}";
     return Results.Text(configuration.GetV1(siteName, tenantId), "application/json"); 
 })
     .WithName(WellKnownConfig.V1EPName);
 
 app.MapGet(WellKnownConfig.V2Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
 {
-    var siteName = $"{request.Scheme}//{request.Host.ToUriComponent()}";
+    var siteName = $"{request.Scheme}://{request.Host.ToUriComponent()}";
     return Results.Text(configuration.GetV2(siteName, tenantId), "application/json");
 })
     .WithName(WellKnownConfig.V2EPName);

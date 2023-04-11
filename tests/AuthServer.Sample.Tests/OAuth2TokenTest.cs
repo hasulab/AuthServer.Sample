@@ -15,7 +15,9 @@ namespace AuthServer.Sample.Tests
         [Fact]
         public void TestGenerateToken()
         {
-            var settings = new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" });
+            var settings = new TestOptions(new AppSettings() { 
+                SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS"
+            });
             var jwtSigningService = new JwtSigningService(settings);
             var util = new JwtUtils(jwtSigningService);
             AuthRequestContext requestContext = new ();
