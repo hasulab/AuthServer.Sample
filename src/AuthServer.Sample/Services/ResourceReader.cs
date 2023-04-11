@@ -330,91 +330,6 @@ public class OAuth2Token
         }
     }
 }
-public class OAuthTokenRequest
-{    
-    public string grant_type { get; set; } = GrantType.client_credentials;
-
-    //client_id is AppId in  jwt
-    public string client_id { get; set; }
-    public string client_secret { get; set; }
-    public string username { get; set; }
-    public string password { get; set; }
-    public string client_assertion { get; set; }
-    public string code_verifier { get; set; }
-    public string redirect_uri { get; set; }
-    public string code { get; set; }
-    public string scope { get; set; }
-    public string tenant { get; set; }
-    public string response_type { get; set; } //code id_token access_token
-    public string response_mode { get; set; }//query,fragment,form_post
-    public string state { get; set; }
-    public string nonce { get; set; }
-    public string prompt { get; set; }
-    public string login_hint { get; set; }
-    public string code_challenge { get; set; }
-    public string code_challenge_method { get; set; }
-}
-
-public class OAuthTokenResponse
-{
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string code { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string state { get; set; }
-
-    public string token_type { get; set; } = TokenType.Bearer;
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string expires_in { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string ext_expires_in { get; set; }
-
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string expires_on { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string not_before { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string scope { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string id_token { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string resource { get; set; } = "00000002-0000-0000-c000-000000000000";
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string access_token { get; set; }
-    /*
-     "token_type": "Bearer",
-  "expires_in": "3599",
-  "ext_expires_in": "3599",
-  "expires_on": "1680540490",
-  "not_before": "1680536590",
-  "resource": "00000002-0000-0000-c000-000000000000",*/
-
-}
-
-
-//GET http://localhost?error=access_denied&error_description=the+user+canceled+the+authentication
-public class OAuthErrorResponse
-{
-    
-    public string error_description { get; set; }
-    public string error { get; set; }
-    public int[] error_codes { get; set; }
-    public string correlation_id { get; set; }
-    public string trace_id { get; set; }
-
-    //invalid_request,unauthorized_client,access_denied
-    //,unsupported_response_type,server_error
-    //temporarily_unavailable,invalid_resource,
-    //login_required,interaction_required
-}
 
 public class OAuth2Authorize
 {
@@ -426,6 +341,65 @@ public class OAuth2Authorize
 public class AppSettings
 {
     public string SecretKey { get; set; }
+    public string CertificateFile { get; set; }
+    public string CertificatePassword { get; set; }
+}
+
+public interface IJwtSigningService
+{
+    SecurityKey GetSecurityKey(Guid tenantId);
+    SigningCredentials GetSigningCredentials(Guid tenantId);
+    EncryptingCredentials GetEncryptingCredentials(Guid tenantId);
+}
+
+internal class JwtSigningService : IJwtSigningService
+{
+    private readonly AppSettings _appSettings;
+
+    public JwtSigningService(IOptions<AppSettings> appSettings)
+    {
+        _appSettings = appSettings.Value;
+    }
+
+    public SecurityKey GetSecurityKey(Guid tenantId)
+    {
+        SecurityKey secret = null;
+        if (_appSettings.CertificateFile != null && _appSettings.CertificatePassword != null )
+        {
+            var cert = new X509Certificate2(_appSettings.CertificateFile, _appSettings.CertificatePassword);
+            secret = new X509SecurityKey(cert);
+        }
+        else if (_appSettings.SecretKey != null)
+        {
+            secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.SecretKey));
+        }
+        else
+        {
+            _appSettings.SecretKey.ThrowAuthExceptionIfNull(Errors.invalid_resource, "SecretKey or CertificateFile not configured");
+        }
+        return secret;
+    }
+
+    public EncryptingCredentials GetEncryptingCredentials(Guid tenantId)
+    {
+        var secret = GetSecurityKey(tenantId);
+        var encryptionCredentials = new EncryptingCredentials(secret, JwtConstants.DirectKeyUseAlg, SecurityAlgorithms.Aes256CbcHmacSha512);
+        return encryptionCredentials;
+    }
+
+    public SigningCredentials GetSigningCredentials(Guid tenantId)
+    {
+        var secret = GetSecurityKey(tenantId);
+        var signingCredentials = new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
+
+        //using a certificate file
+        //X509Certificate2 cert = new X509Certificate2("MySelfSignedCertificate.pfx", "password");
+        //X509SecurityKey key = new X509SecurityKey(cert);
+        //signingCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
+
+        return signingCredentials;
+    }
+
 }
 
 public interface IJwtUtils
@@ -438,31 +412,22 @@ public interface IJwtUtils
 
 public class JwtUtils : IJwtUtils
 {
-    private readonly AppSettings _appSettings;
+    private readonly IJwtSigningService _signingService;
 
-    public JwtUtils(IOptions<AppSettings> appSettings)
+    public JwtUtils(IJwtSigningService signingService)
     {
-        _appSettings = appSettings.Value;
+        _signingService = signingService;
     }
 
     public string GenerateToken(ClaimsIdentity claimsIdentity, AuthRequestContext requestContext,
-        out long expiresIn,
-        DateTime? issuedAt = null, DateTime? notBefore = null , DateTime? expires = null, double defaultExpiryMinutes = 30)
+        out long expiresIn, DateTime? issuedAt = null, DateTime? notBefore = null, DateTime? expires = null,
+        double defaultExpiryMinutes = 30)
     {
         // generate token that is valid for 30 minutes
         var tokenHandler = new JwtSecurityTokenHandler();
-        var secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.SecretKey));
-        var signingCredentials = new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
-        var encryptionCredentials = new EncryptingCredentials(secret, JwtConstants.DirectKeyUseAlg, SecurityAlgorithms.Aes256CbcHmacSha512);
-
-        //using a certificate file
-        //X509Certificate2 cert = new X509Certificate2("MySelfSignedCertificate.pfx", "password");
-        //X509SecurityKey key = new X509SecurityKey(cert);
-        //signingCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
+        var signingCredentials = _signingService.GetSigningCredentials(requestContext.TenantId);
 
         var requestTime = requestContext.RequestTime;// DateTimeOffset.UtcNow;
-        var nowUnix = requestTime.ToUnixTimeSeconds;
-        var nowUtc = requestTime.UtcDateTime;
 
         notBefore ??= requestTime.UtcDateTime;
         issuedAt ??= requestTime.UtcDateTime;
@@ -490,10 +455,10 @@ public class JwtUtils : IJwtUtils
         if (token == null)
             return false;
 
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.SecretKey));
+        var secret = _signingService.GetSecurityKey(requestContext.TenantId);
         try
         {
+            var tokenHandler = new JwtSecurityTokenHandler();
             tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidIssuer = requestContext.Issuer,
@@ -523,28 +488,6 @@ public class JwtUtils : IJwtUtils
     }
 }
 
-public static class StreamExtentions
-{
-    public static Stream GenerateStreamFromString(string s)
-    {
-        var stream = new MemoryStream();
-        var writer = new StreamWriter(stream);
-        writer.Write(s);
-        writer.Flush();
-        stream.Position = 0;
-        return stream;
-    }
-
-    public static Stream GenerateStreamFromStringBuilder(StringBuilder s)
-    {
-        var stream = new MemoryStream();
-        var writer = new StreamWriter(stream);
-        writer.Write(s);
-        writer.Flush();
-        stream.Position = 0;
-        return stream;
-    }
-}
 
 
 

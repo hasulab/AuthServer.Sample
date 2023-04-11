@@ -1,4 +1,5 @@
-﻿using AuthServer.Sample.Services;
+﻿using AuthServer.Sample.Models;
+using AuthServer.Sample.Services;
 
 namespace AuthServer.Sample.Exceptions;
 

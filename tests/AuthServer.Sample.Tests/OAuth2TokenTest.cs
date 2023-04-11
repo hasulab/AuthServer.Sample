@@ -15,7 +15,9 @@ namespace AuthServer.Sample.Tests
         [Fact]
         public void TestGenerateToken()
         {
-            var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
+            var settings = new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" });
+            var jwtSigningService = new JwtSigningService(settings);
+            var util = new JwtUtils(jwtSigningService);
             AuthRequestContext requestContext = new ();
             var token = util.GenerateToken(new ClaimsIdentity(new List<Claim> { new Claim("Id", "TestId") }), requestContext,
                 out long expiresIn);
@@ -62,7 +64,10 @@ namespace AuthServer.Sample.Tests
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
             var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
-            var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
+            var settings = new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" });
+            var jwtSigningService = new JwtSigningService(settings);
+            var util = new JwtUtils(jwtSigningService);
+
             var service = new OAuth2Token(util, moqClientDataProvider.Object);
             var tokenRequest = new OAuthTokenRequest() { 
                 client_id="TestClient id", grant_type = GrantType.client_credentials, client_secret="SuperS3cr3t"
@@ -104,7 +109,10 @@ namespace AuthServer.Sample.Tests
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
             var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
-            var util = new JwtUtils(new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" }));
+            var settings = new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" });
+            var jwtSigningService = new JwtSigningService(settings);
+            var util = new JwtUtils(jwtSigningService);
+
             var service = new OAuth2Token(util, moqClientDataProvider.Object);
             var tokenRequest = new OAuthTokenRequest() { 
                 client_id = "TestClient id", 
