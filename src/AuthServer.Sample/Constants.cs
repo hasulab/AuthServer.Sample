@@ -47,6 +47,13 @@ public class Constants
             //"/oauth2/authorize"
             public const string V1Url = "/{tenantId}/oauth2/authorize";
             public const string V2Url = "/{tenantId}/oauth2/v2.0/authorize";
+
+            public const string V1PostEPName = "v1-oauth2-authorize";
+            public const string V2PostEPName = "v2-oauth2-authorize";
+
+            public const string V1GetEPName = "Get-v1-oauth2-authorize";
+            public const string V2GetEPName = "Get-v2-oauth2-authorize";
+
         }
 
         public static class GrantType

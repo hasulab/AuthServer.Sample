@@ -2,6 +2,7 @@ using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Models;
 using AuthServer.Sample.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +15,7 @@ builder.Services
     .AddHttpContextAccessor()
     .AddSingleton<AppSettings>()
     .AddSingleton<ResourceReader>()
-    .AddScoped<WellKnownOpenidConfiguration>()
+    .AddScoped<WellKnownConfiguration>()
     .AddScoped<OAuth2Token>()
     .AddScoped<IJwtSigningService, JwtSigningService>()
     .AddScoped<IJwtUtils, JwtUtils>()
@@ -28,7 +29,24 @@ builder.Services
 
 builder.Services.AddOptions<AppSettings>().BindConfiguration("");
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new()
+    {
+        Title = builder.Environment.ApplicationName,
+        Version = "v1"
+    });
+});
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json",
+                                    $"{builder.Environment.ApplicationName} v1"));
+}
 
 var appSettings = app.Services.GetService<IOptions<AppSettings>>();
 
@@ -58,7 +76,10 @@ app.MapGet("/", (LinkGenerator linker) =>
            {
                { "V1 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V1EPName, values: new { tenantId = Guid.Empty }) },
                { "V2 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V2EPName, values: new { tenantId = Guid.Empty }) },
-               { "V1 /oauth2/token",linker.GetPathByName("v1-oauth2-token", values: new { tenantId = Guid.Empty }) },
+               { "V1 /oauth2/token",linker.GetPathByName(Token.V1EPName, values: new { tenantId = Guid.Empty }) },
+               { "V2 /oauth2/token",linker.GetPathByName(Token.V2EPName, values: new { tenantId = Guid.Empty }) },
+               { "V1 /oauth2/authorize",linker.GetPathByName(Authorize.V1GetEPName, values: new { tenantId = Guid.Empty }) },
+               { "V2 /oauth2/authorize",linker.GetPathByName(Authorize.V2GetEPName, values: new { tenantId = Guid.Empty }) },
            }
            .Select(x => $"<a href='{x.Value}'>{x.Key}</a>").ToArray();
 
@@ -66,25 +87,56 @@ app.MapGet("/", (LinkGenerator linker) =>
            return Results.Content($"<html><body></body>{htmlBody}</html>", "text/html; charset=utf-8");
        });
 
-app.MapGet(WellKnownConfig.V1Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
+app.MapGet(WellKnownConfig.V1Url, (WellKnownConfiguration configuration, HttpRequest request, string tenantId) =>
 {
     var siteName = $"{request.Scheme}://{request.Host.ToUriComponent()}";
     return Results.Text(configuration.GetV1(siteName, tenantId), "application/json"); 
 })
     .WithName(WellKnownConfig.V1EPName);
 
-app.MapGet(WellKnownConfig.V2Url, (WellKnownOpenidConfiguration configuration, HttpRequest request, string tenantId) =>
+app.MapGet(WellKnownConfig.V2Url, (WellKnownConfiguration configuration, HttpRequest request, string tenantId) =>
 {
     var siteName = $"{request.Scheme}://{request.Host.ToUriComponent()}";
     return Results.Text(configuration.GetV2(siteName, tenantId), "application/json");
 })
     .WithName(WellKnownConfig.V2EPName);
 
-app.MapPost(Token.V1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, AuthRequestContext requestConext) =>
+app.MapPost(Token.V1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
     .WithName(Token.V1EPName);
+
+app.MapPost(Token.V2Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+{
+    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+})
+    .WithName(Token.V2EPName);
+
+
+app.MapGet(Authorize.V1Url, (OAuth2Token tokenService,[FromQuery] OAuthTokenRequest tokenRequest,[FromServices] AuthRequestContext requestConext) =>
+{
+    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+})
+    .WithName(Authorize.V1GetEPName);
+
+app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromQuery] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+{
+    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+})
+    .WithName(Authorize.V1PostEPName);
+
+app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, [FromQuery] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+{
+    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+})
+    .WithName(Authorize.V2GetEPName);
+
+app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromQuery] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+{
+    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+})
+    .WithName(Authorize.V2PostEPName);
 
 app.Use(async (context, next) =>
 {

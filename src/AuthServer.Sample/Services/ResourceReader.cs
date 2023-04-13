@@ -33,11 +33,11 @@ public class ResourceReader
     }
 }
 
-public class WellKnownOpenidConfiguration
+public class WellKnownConfiguration
 {
     private readonly ResourceReader _resourceReader;
 
-    public WellKnownOpenidConfiguration(ResourceReader resourceReader)
+    public WellKnownConfiguration(ResourceReader resourceReader)
     {
         _resourceReader = resourceReader;
     }
