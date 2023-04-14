@@ -40,7 +40,7 @@ public static class RequestExtentions
     public static T QueryStringTo<T>(this HttpRequest request)
         where T:class, new()
     {
-        if (request.QueryString.HasValue)
+        if (!request.QueryString.HasValue)
         {
             return new T();
         }
