@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using System.Text;
 using AuthServer.Sample.Models;
 using AuthServer.Sample.Exceptions;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
 namespace AuthServer.Sample.Extentions;
 
@@ -33,6 +35,41 @@ public static class RequestExtentions
 
         request.ContentType = "application/json";
         request.Body = StreamExtentions.GenerateStreamFromStringBuilder(stringBuilder);
+    }
+
+    public static T QueryStringTo<T>(this HttpRequest request)
+        where T:class, new()
+    {
+        if (request.QueryString.HasValue)
+        {
+            return new T();
+        }
+
+        var queryString = request.QueryString.Value ?? string.Empty;
+        var queryDictionary = queryString.Split('&')
+            .Select(x =>
+            {
+                var kv = x.Split('=');
+                return new { k = kv.First(), v = kv.Last() };
+            }).ToDictionary(x => x.k, x => x.v);
+
+        var enumerator = queryDictionary.GetEnumerator();
+        var hasMore = enumerator.MoveNext();
+
+        StringBuilder stringBuilder = new("{");
+        while (hasMore)
+        {
+            var field = enumerator.Current;
+            stringBuilder.Append($"\"{field.Key}\":\"{field.Value}\"");
+            hasMore = enumerator.MoveNext();
+            if (hasMore)
+            {
+                stringBuilder.Append(',');
+            }
+        }
+
+        stringBuilder.Append('}');
+        return JsonSerializer.Deserialize<T>(stringBuilder.ToString());        
     }
 }
 

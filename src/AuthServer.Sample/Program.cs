@@ -81,9 +81,9 @@ app.MapGet("/", (LinkGenerator linker) =>
                { "V1 /oauth2/authorize",linker.GetPathByName(Authorize.V1GetEPName, values: new { tenantId = Guid.Empty }) },
                { "V2 /oauth2/authorize",linker.GetPathByName(Authorize.V2GetEPName, values: new { tenantId = Guid.Empty }) },
            }
-           .Select(x => $"<a href='{x.Value}'>{x.Key}</a>").ToArray();
+           .Select(x => $"<tr><td><a href='{x.Value}'>{x.Key}</a></td></tr>").ToArray();
 
-           var htmlBody = $"<div><span>The link to the</span> { string.Join(",", urls) } </dv>";
+           var htmlBody = $"<div><span>The link to the</span> <table>{ string.Join(",", urls) }</table></dv>";
            return Results.Content($"<html><body></body>{htmlBody}</html>", "text/html; charset=utf-8");
        });
 
@@ -114,25 +114,27 @@ app.MapPost(Token.V2Url, (OAuth2Token tokenService, OAuthTokenRequest tokenReque
     .WithName(Token.V2EPName);
 
 
-app.MapGet(Authorize.V1Url, (OAuth2Token tokenService,[FromQuery] OAuthTokenRequest tokenRequest,[FromServices] AuthRequestContext requestConext) =>
+app.MapGet(Authorize.V1Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestConext) =>
 {
+    var tokenRequest = request.QueryStringTo<OAuthTokenRequest>();
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
     .WithName(Authorize.V1GetEPName);
 
-app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromQuery] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
     .WithName(Authorize.V1PostEPName);
 
-app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, [FromQuery] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestConext) =>
 {
+    var tokenRequest = request.QueryStringTo<OAuthTokenRequest>();
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
     .WithName(Authorize.V2GetEPName);
 
-app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromQuery] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
@@ -147,3 +149,6 @@ app.Use(async (context, next) =>
 });
 
 app.Run();
+
+
+public partial class Program { }
