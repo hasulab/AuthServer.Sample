@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
+using static AuthServer.Sample.Constants.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -125,8 +126,8 @@ app.MapGet(Authorize.V1Url, (OAuth2Token tokenService, HttpRequest request, [Fro
 
 app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
-    return AuthResults.HandleAuhResponse(tokenRequest.response_mode,
-            () => tokenService.GenerateResponse(tokenRequest, requestConext));
+    return AuthResults.HandleAuhResponse(tokenRequest.response_mode ?? ResponseMode.fragment,
+            () => tokenService.GenerateResponse(tokenRequest, requestConext), tokenRequest.redirect_uri);
 
 })
     .WithName(Authorize.V1PostEPName);
@@ -140,7 +141,7 @@ app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, HttpRequest request, [Fro
 
 app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
-    return AuthResults.HandleAuhResponse(tokenRequest.response_mode,
+    return AuthResults.HandleAuhResponse(tokenRequest.response_mode ?? ResponseMode.fragment,
             () => tokenService.GenerateResponse(tokenRequest, requestConext));
 
 })

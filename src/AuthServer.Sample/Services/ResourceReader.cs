@@ -227,7 +227,8 @@ public class OAuth2Token
         { ResponseType.id_token,(jwtUtils, res,user, ctx)=> { UpdateIdToken(jwtUtils, res,user,ctx); } }
     };
 
-    public OAuthTokenResponse GenerateResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
+    public OAuthTokenResponse GenerateResponse(OAuthTokenRequest tokenRequest,
+        AuthRequestContext requestCtx)
     {
         AuthUser authUser;
         if (tokenRequest.grant_type == GrantType.client_credentials)

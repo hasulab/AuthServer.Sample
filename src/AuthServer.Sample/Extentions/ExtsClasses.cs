@@ -171,12 +171,13 @@ public static class StreamExtentions
 
 public static class AuthResults
 {
-    public static IResult HandleAuhResponse(string response_mode, Func<OAuthTokenResponse> func)
+    public static IResult HandleAuhResponse(string response_mode, Func<OAuthTokenResponse> func,
+        string? redirect_uri = null)
     {
         try
         {
             var tokenResponse = func();
-            return BuildAuthResponse(response_mode, tokenResponse);
+            return BuildAuthResponse(response_mode, tokenResponse, redirect_uri);
         }
         catch (AuthException ex)
         {
@@ -188,23 +189,49 @@ public static class AuthResults
         }
     }
 
-    private static IResult BuildAuthResponse(string response_mode, OAuthTokenResponse tokenResponse)
+    private static IResult BuildAuthResponse<T>(string response_mode, T response, string? redirect_uri = null)
+        where T : class
     {
         if (string.IsNullOrEmpty(response_mode))
         {
-            return Results.Ok(tokenResponse);
+            return Results.Ok(response);
         }
         else if (response_mode == ResponseMode.fragment)
         {
-            return Results.Ok(tokenResponse);
+            var queryDictionary = response.ToDictionary();
+            var responseQueryString = string.Join('&', queryDictionary.Select(x => $"{x.Key}={x.Value}"));
+
+            return Results.Redirect($"{redirect_uri}?{responseQueryString}");
         }
         else if (response_mode == ResponseMode.form_post)
         {
-            return Results.Ok(tokenResponse);
+            return Results.Ok(response);
         }
         else
         {
             throw new AuthException(Errors.invalid_resource, $"invalid {nameof(response_mode)} : {response_mode}");
         }
+    }
+}
+
+public static class ObjectExtentions
+{
+    public static Dictionary<string,string> ToDictionary<T>(this T t)
+        where T: class
+    {
+        if (t == null)
+        {
+            throw new ArgumentNullException(nameof(t));
+        }
+        var type = typeof(T);
+        var properties = type.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+
+#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
+        return properties
+            .Select(p => new { p, v = p.GetValue(t, null) })
+            .Where(x => x.v != null)
+            .ToDictionary(k => k.p.Name, v => v?.v?.ToString());
+#pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
+
     }
 }

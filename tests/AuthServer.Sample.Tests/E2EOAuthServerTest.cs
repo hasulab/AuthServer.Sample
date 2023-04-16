@@ -1,4 +1,5 @@
-﻿using AuthServer.Sample.Models;
+﻿using AuthServer.Sample.Extentions;
+using AuthServer.Sample.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -78,6 +79,24 @@ public class E2EOAuthServerTest
         var url = BuildAuthUrl(Authorize.V1Url);
         var queryString = "?client_id=6731de76-14a6-49ae-97bc-6eba6914391e&response_type=id_token&redirect_uri=http%3A%2F%2Flocalhost%2Fmyapp%2F&scope=openid&response_mode=fragment&state=12345&nonce=678910";
         var response = await client.GetAsync(url + queryString);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TestPostAuthorize()
+    {
+        await using var application = new TestAuthWebApplication();
+
+        var client = application.CreateClient();
+        var url = BuildAuthUrl(Authorize.V1Url);
+        var queryString = "?client_id=6731de76-14a6-49ae-97bc-6eba6914391e&response_type=id_token&redirect_uri=http%3A%2F%2Flocalhost%2Fmyapp%2F&scope=openid&response_mode=fragment&state=12345&nonce=678910";
+        using var httpContent = new MultipartFormDataContent
+        {
+            { new StringContent("TestCId"), "client_id" },
+            { new StringContent("S3cr3t"), "client_secret" }
+        };
+        var response = await client.PostAsync(url + queryString, httpContent);
+
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
