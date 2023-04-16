@@ -5,6 +5,7 @@ using AuthServer.Sample.Models;
 using AuthServer.Sample.Exceptions;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using static AuthServer.Sample.Constants.Auth;
 
 namespace AuthServer.Sample.Extentions;
 
@@ -164,5 +165,46 @@ public static class StreamExtentions
         writer.Flush();
         stream.Position = 0;
         return stream;
+    }
+}
+
+
+public static class AuthResults
+{
+    public static IResult HandleAuhResponse(string response_mode, Func<OAuthTokenResponse> func)
+    {
+        try
+        {
+            var tokenResponse = func();
+            return BuildAuthResponse(response_mode, tokenResponse);
+        }
+        catch (AuthException ex)
+        {
+            return Results.BadRequest(ex?.OAuthError);
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(ex);
+        }
+    }
+
+    private static IResult BuildAuthResponse(string response_mode, OAuthTokenResponse tokenResponse)
+    {
+        if (string.IsNullOrEmpty(response_mode))
+        {
+            return Results.Ok(tokenResponse);
+        }
+        else if (response_mode == ResponseMode.fragment)
+        {
+            return Results.Ok(tokenResponse);
+        }
+        else if (response_mode == ResponseMode.form_post)
+        {
+            return Results.Ok(tokenResponse);
+        }
+        else
+        {
+            throw new AuthException(Errors.invalid_resource, $"invalid {nameof(response_mode)} : {response_mode}");
+        }
     }
 }
