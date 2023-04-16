@@ -44,11 +44,13 @@ public class E2EOAuthServerTest
 
         var client = application.CreateClient();
         var url = BuildAuthUrl(Token.V1Url);
-        using var httpContent = new MultipartFormDataContent();
-        httpContent.Add(new StringContent("TestCId"), "client_id");
-        httpContent.Add(new StringContent("S3cr3t"), "client_secret");
+        using var httpContent = new MultipartFormDataContent
+        {
+            { new StringContent("TestCId"), "client_id" },
+            { new StringContent("S3cr3t"), "client_secret" }
+        };
         var response = await client.PostAsync(url, httpContent);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -64,7 +66,7 @@ public class E2EOAuthServerTest
             client_secret = "S3cret"
         };
         var response = await client.PostAsJsonAsync(url, jsonPayload);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public class E2EOAuthServerTest
         var url = BuildAuthUrl(Authorize.V1Url);
         var queryString = "?client_id=6731de76-14a6-49ae-97bc-6eba6914391e&response_type=id_token&redirect_uri=http%3A%2F%2Flocalhost%2Fmyapp%2F&scope=openid&response_mode=fragment&state=12345&nonce=678910";
         var response = await client.GetAsync(url + queryString);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
 public class TestAuthWebApplication : WebApplicationFactory<Program>

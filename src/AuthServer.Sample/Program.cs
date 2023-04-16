@@ -101,13 +101,13 @@ app.MapGet(WellKnownConfig.V2Url, (WellKnownConfiguration configuration, HttpReq
 })
     .WithName(WellKnownConfig.V2EPName);
 
-app.MapPost(Token.V1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Token.V1Url, (OAuth2Token tokenService,[FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
     .WithName(Token.V1EPName);
 
-app.MapPost(Token.V2Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Token.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
@@ -121,7 +121,7 @@ app.MapGet(Authorize.V1Url, (OAuth2Token tokenService, HttpRequest request, [Fro
 })
     .WithName(Authorize.V1GetEPName);
 
-app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
@@ -134,7 +134,7 @@ app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, HttpRequest request, [Fro
 })
     .WithName(Authorize.V2GetEPName);
 
-app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
 {
     return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
 })
