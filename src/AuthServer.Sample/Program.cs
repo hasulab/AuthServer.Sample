@@ -120,7 +120,7 @@ app.MapPost(Token.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest
 app.MapGet(Authorize.V1Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestConext) =>
 {
     var tokenRequest = request.QueryStringTo<OAuthTokenRequest>();
-    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+    return AuthResults.HandleAuhResponse(()=> tokenService.BuildAuthorizeResponse(tokenRequest, requestConext));
 })
     .WithName(Authorize.V1GetEPName);
 
@@ -135,7 +135,7 @@ app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromBody] OAuthTokenReq
 app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestConext) =>
 {
     var tokenRequest = request.QueryStringTo<OAuthTokenRequest>();
-    return Results.Ok(tokenService.GenerateResponse(tokenRequest, requestConext));
+    return AuthResults.HandleAuhResponse(() => tokenService.BuildAuthorizeResponse(tokenRequest, requestConext));
 })
     .WithName(Authorize.V2GetEPName);
 

@@ -226,9 +226,22 @@ public class OAuth2Token
         { ResponseType.access_token,(jwtUtils, res,user, ctx)=> { UpdateAccessToken(jwtUtils, res,user,ctx); } },
         { ResponseType.id_token,(jwtUtils, res,user, ctx)=> { UpdateIdToken(jwtUtils, res,user,ctx); } }
     };
-
-    public OAuthTokenResponse GenerateResponse(OAuthTokenRequest tokenRequest,
+    
+    public OAuthAuthorizeResponse BuildAuthorizeResponse(OAuthTokenRequest tokenRequest,
         AuthRequestContext requestCtx)
+    {
+
+        var tokenRequestQuery = tokenRequest.ToDictionary().ToQueryString();
+        var encodedToken = tokenRequestQuery.ToBase64String();
+
+        return new OAuthAuthorizeResponse
+        {
+            LoginUrl = "/auth/login",
+            RequestToken = encodedToken
+        };
+    }
+
+    public OAuthTokenResponse GenerateResponse(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
         AuthUser authUser;
         if (tokenRequest.grant_type == GrantType.client_credentials)

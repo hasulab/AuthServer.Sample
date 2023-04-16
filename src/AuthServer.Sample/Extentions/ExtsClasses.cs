@@ -47,14 +47,8 @@ public static class RequestExtentions
         }
 
         var queryString = request.QueryString.Value ?? string.Empty;
-        var queryDictionary = queryString.Split('&')
-            .Select(x =>
-            {
-                var kv = x.Split('=');
-                return new { k = kv.First(), v = kv.Last() };
-            }).ToDictionary(x => x.k, x => x.v);
 
-        var enumerator = queryDictionary.GetEnumerator();
+        var enumerator = queryString.ToDictionary().GetEnumerator();
         var hasMore = enumerator.MoveNext();
 
         StringBuilder stringBuilder = new("{");
@@ -171,6 +165,23 @@ public static class StreamExtentions
 
 public static class AuthResults
 {
+    public static IResult HandleAuhResponse(Func<OAuthAuthorizeResponse> func)
+    {
+        try
+        {
+            var authorizeResponse = func();
+            return BuildAuthResponse(ResponseMode.fragment, new { authorizeResponse.RequestToken }, authorizeResponse.LoginUrl);
+        }
+        catch (AuthException ex)
+        {
+            return Results.BadRequest(ex?.OAuthError);
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(ex);
+        }
+    }
+
     public static IResult HandleAuhResponse(string response_mode, Func<OAuthTokenResponse> func,
         string? redirect_uri = null)
     {
@@ -198,10 +209,9 @@ public static class AuthResults
         }
         else if (response_mode == ResponseMode.fragment)
         {
-            var queryDictionary = response.ToDictionary();
-            var responseQueryString = string.Join('&', queryDictionary.Select(x => $"{x.Key}={x.Value}"));
+            var queryString = response.ToDictionary().ToQueryString();
 
-            return Results.Redirect($"{redirect_uri}?{responseQueryString}");
+            return Results.Redirect($"{redirect_uri}?{queryString}");
         }
         else if (response_mode == ResponseMode.form_post)
         {
@@ -234,4 +244,35 @@ public static class ObjectExtentions
 #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
 
     }
+
+    public static string ToQueryString(this Dictionary<string, string> queryDictionary)
+    {
+        var queryString = string.Join('&', queryDictionary.Select(x => $"{x.Key}={x.Value}"));
+        return queryString; 
+
+    }
+}
+
+public static class StringExtentions
+{ 
+    public static string ToBase64String(this string plainText)
+    {
+        var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+        var base64EncodedText = Convert.ToBase64String(plainTextBytes);
+        return base64EncodedText;
+    }
+
+    public static Dictionary<string, string> ToDictionary(this string queryString)
+    {
+        var queryDictionary = queryString.Split('&')
+            .Select(x =>
+            {
+                var kv = x.Split('=');
+                return new { k = kv.First(), v = kv.Last() };
+            }).
+            ToDictionary(x => x.k, x => x.v);
+
+        return queryDictionary;
+    }
+
 }

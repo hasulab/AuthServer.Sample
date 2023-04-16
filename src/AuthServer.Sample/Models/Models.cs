@@ -155,6 +155,12 @@ public class OAuthTokenResponse
 }
 
 
+public class OAuthAuthorizeResponse
+{
+    public string LoginUrl { get; set; }
+    public string RequestToken { get; set; }
+}
+
 //GET http://localhost?error=access_denied&error_description=the+user+canceled+the+authentication
 public class OAuthErrorResponse
 {
