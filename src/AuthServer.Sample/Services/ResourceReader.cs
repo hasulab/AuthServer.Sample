@@ -349,14 +349,39 @@ public class OAuth2Authorize
 {
 }
 
-
-///https://jasonwatmore.com/post/2021/06/02/net-5-create-and-validate-jwt-tokens-use-custom-jwt-middleware
-
-public class AppSettings
+public class AuthSettings
 {
+    public List<TenantSettings> Tenants { get; set; }
+}
+
+public class TenantSettings
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
     public string SecretKey { get; set; }
     public string CertificateFile { get; set; }
     public string CertificatePassword { get; set; }
+}
+
+///https://jasonwatmore.com/post/2021/06/02/net-5-create-and-validate-jwt-tokens-use-custom-jwt-middleware
+
+public interface ITenantsDataProvider
+{
+    TenantSettings GetTenantSettings(Guid tenantId);
+}
+
+public class TenantsDataProvider : ITenantsDataProvider
+{
+    AuthSettings _authSettings;
+    public TenantsDataProvider(IOptions<AuthSettings> authOptions)
+    {
+        _authSettings = authOptions.Value;
+    }
+    public TenantSettings GetTenantSettings(Guid tenantId)
+    {
+        return _authSettings.Tenants
+            .SingleOrDefault(x => x.Id == tenantId) ?? new TenantSettings();
+    }
 }
 
 public interface IJwtSigningService
@@ -368,28 +393,28 @@ public interface IJwtSigningService
 
 internal class JwtSigningService : IJwtSigningService
 {
-    private readonly AppSettings _appSettings;
+    private readonly TenantSettings _tenantSettings;
 
-    public JwtSigningService(IOptions<AppSettings> appSettings)
+    public JwtSigningService(TenantSettings tenantSettings)
     {
-        _appSettings = appSettings.Value;
+        _tenantSettings = tenantSettings;
     }
 
     public SecurityKey GetSecurityKey(Guid tenantId)
     {
         SecurityKey secret = null;
-        if (_appSettings.CertificateFile != null && _appSettings.CertificatePassword != null )
+        if (_tenantSettings.CertificateFile != null && _tenantSettings.CertificatePassword != null )
         {
-            var cert = new X509Certificate2(_appSettings.CertificateFile, _appSettings.CertificatePassword);
+            var cert = new X509Certificate2(_tenantSettings.CertificateFile, _tenantSettings.CertificatePassword);
             secret = new X509SecurityKey(cert);
         }
-        else if (_appSettings.SecretKey != null)
+        else if (_tenantSettings.SecretKey != null)
         {
-            secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.SecretKey));
+            secret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_tenantSettings.SecretKey));
         }
         else
         {
-            _appSettings.SecretKey.ThrowAuthExceptionIfNull(Errors.invalid_resource, "SecretKey or CertificateFile not configured");
+            _tenantSettings?.SecretKey.ThrowAuthExceptionIfNull(Errors.invalid_resource, "SecretKey or CertificateFile not configured");
         }
         return secret;
     }

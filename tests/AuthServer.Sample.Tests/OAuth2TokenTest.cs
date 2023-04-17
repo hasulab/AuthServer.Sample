@@ -1,7 +1,6 @@
 ﻿using AuthServer.Sample.Services;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using Moq;
 using System.Security.Claims;
 using AuthServer.Sample.Extentions;
@@ -15,25 +14,16 @@ namespace AuthServer.Sample.Tests
         [Fact]
         public void TestGenerateToken()
         {
-            var settings = new TestOptions(new AppSettings() { 
+            var settings = new TenantSettings
+            {
                 SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS"
-            });
+            };
             var jwtSigningService = new JwtSigningService(settings);
             var util = new JwtUtils(jwtSigningService);
             AuthRequestContext requestContext = new ();
             var token = util.GenerateToken(new ClaimsIdentity(new List<Claim> { new Claim("Id", "TestId") }), requestContext,
                 out long expiresIn);
 
-        }
-        class TestOptions : IOptions<AppSettings>
-        {
-            private readonly AppSettings appSettings;
-
-            public TestOptions(AppSettings appSettings)
-            {
-                this.appSettings = appSettings;
-            }
-            public AppSettings Value => appSettings;
         }
 
         [Fact]
@@ -66,7 +56,10 @@ namespace AuthServer.Sample.Tests
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
             var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
-            var settings = new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" });
+            var settings = new TenantSettings
+            {
+                SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS"
+            };
             var jwtSigningService = new JwtSigningService(settings);
             var util = new JwtUtils(jwtSigningService);
 
@@ -111,7 +104,10 @@ namespace AuthServer.Sample.Tests
             HttpContextExtensions.SetRequestContext(moqHttpContext.Object);
             var requestContext = HttpContextExtensions.GetRequestContext(moqHttpContext.Object);
 
-            var settings = new TestOptions(new AppSettings() { SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS" });
+            var settings = new TenantSettings
+            {
+                SecretKey = "SecretKeySecretKeySecretKeySecretKeySecretKeySecretKeySecretKeyS"
+            };
             var jwtSigningService = new JwtSigningService(settings);
             var util = new JwtUtils(jwtSigningService);
 

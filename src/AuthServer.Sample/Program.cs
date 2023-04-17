@@ -7,28 +7,30 @@ using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System.Reflection;
-using System.Text;
 using static AuthServer.Sample.Constants.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddHttpContextAccessor()
-    .AddSingleton<AppSettings>()
     .AddSingleton<ResourceReader>()
     .AddScoped<WellKnownConfiguration>()
     .AddScoped<OAuth2Token>()
     .AddScoped<IJwtSigningService, JwtSigningService>()
     .AddScoped<IJwtUtils, JwtUtils>()
     .AddScoped<ClientDataProvider>()
+    .AddScoped<ITenantsDataProvider, TenantsDataProvider>()
     .AddScoped<AuthRequestContext>((sp) =>
     {
         var HttpContextAccessor = sp.GetService<IHttpContextAccessor>();
         return HttpContextAccessor?.HttpContext?.GetRequestContext()?? new AuthRequestContext();
     })
+    .AddScoped<TenantSettings>((sp) =>
+    {
+        var HttpContextAccessor = sp.GetService<IHttpContextAccessor>();
+        return HttpContextAccessor?.HttpContext?.GetTenantsContext()?? new TenantSettings();
+    })
     ;
-
-builder.Services.AddOptions<AppSettings>().BindConfiguration("");
+builder.Services.AddOptions<AuthSettings>().BindConfiguration("AuthSettings");
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -49,7 +51,7 @@ if (app.Environment.IsDevelopment())
                                     $"{builder.Environment.ApplicationName} v1"));
 }
 
-var appSettings = app.Services.GetService<IOptions<AppSettings>>();
+var authSettings = app.Services.GetService<IOptions<AuthSettings>>();
 
 var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
 //Microsoft.AspNetCore.Http.DefaultHttpContext
@@ -61,6 +63,8 @@ app.Use(async (context, next) =>
     {
         await context.Request.FormContentToJson();
     }
+    context.SetTenantsContext();
+
     await next(context);
 
     static async Task AwaitRequestTask()

@@ -119,6 +119,26 @@ public static class HttpContextExtensions
     {
         return context.Features.Get<AuthRequestContext>();
     }
+
+    public static void SetTenantsContext(this HttpContext context)
+    {
+        if (context.GetTenantsContext() != null)
+        {
+            return;
+        }
+
+        var requestContext = context.Features.Get<AuthRequestContext>();
+        if (requestContext != null && requestContext.HasTenantId)
+        {
+            var tenantSettings = context.RequestServices.GetService<ITenantsDataProvider>()
+            .GetTenantSettings(requestContext.TenantId);
+            context.Features.Set(tenantSettings);
+        }
+    }
+    public static TenantSettings? GetTenantsContext(this HttpContext context)
+    {
+        return context.Features.Get<TenantSettings>();
+    }
 }
 
 public static class NullObjectCheck
