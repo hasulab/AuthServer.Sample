@@ -155,7 +155,8 @@ public class ClientDataProvider
 public class OAuth2Token
 {
     private readonly IJwtUtils _jwtUtils;
-    private readonly ClientDataProvider clientDataProvider;
+    private readonly ClientDataProvider _clientDataProvider;
+    private readonly TenantSettings _tenantSettings;
 
     delegate ClaimRecord claimBuilder(string name, AuthRequestContext request, AuthUser user);
 
@@ -212,10 +213,11 @@ public class OAuth2Token
         return new List<Claim>();
     }
 
-    public OAuth2Token(IJwtUtils jwtUtils, ClientDataProvider clientDataProvider)
+    public OAuth2Token(IJwtUtils jwtUtils, ClientDataProvider clientDataProvider, TenantSettings tenantSettings)
     {
         _jwtUtils = jwtUtils;
-        this.clientDataProvider = clientDataProvider;
+        _clientDataProvider = clientDataProvider;
+        _tenantSettings = tenantSettings;
     }
 
     delegate void UpdateToken(IJwtUtils jwtUtils, OAuthTokenResponse response, AuthUser authUser, AuthRequestContext requestCtx);
@@ -233,10 +235,10 @@ public class OAuth2Token
 
         var tokenRequestQuery = tokenRequest.ToDictionary().ToQueryString();
         var encodedToken = tokenRequestQuery.ToBase64String();
-
+        var loginUrl = _tenantSettings.LoginUrl?.Replace(UrlParams.tenantId, requestCtx.TenantId.ToString());
         return new OAuthAuthorizeResponse
         {
-            LoginUrl = "/auth/login",
+            LoginUrl = loginUrl,
             RequestToken = encodedToken
         };
     }
@@ -264,7 +266,7 @@ public class OAuth2Token
             };
         }
 
-        var responseTypes = clientDataProvider.GetResponseTypes(requestCtx.TenantId ,tokenRequest);
+        var responseTypes = _clientDataProvider.GetResponseTypes(requestCtx.TenantId ,tokenRequest);
         var tokenResponse = new OAuthTokenResponse();
         responseTypes
             .Where(x => _tokenUpdaters.ContainsKey(x))
@@ -276,7 +278,7 @@ public class OAuth2Token
 
     private AuthUser BuildIdToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
-        var user = clientDataProvider.ValidateUserPassword(requestCtx.TenantId, tokenRequest);
+        var user = _clientDataProvider.ValidateUserPassword(requestCtx.TenantId, tokenRequest);
 
         user.ThrowAuthExceptionIfNull(Errors.invalid_request, "Invalid username or password");
 
@@ -296,7 +298,7 @@ public class OAuth2Token
 
     private AuthUser BuildAccessToken(OAuthTokenRequest tokenRequest, AuthRequestContext requestCtx)
     {
-        var user = clientDataProvider.ValidateSecret(requestCtx.TenantId, tokenRequest);
+        var user = _clientDataProvider.ValidateSecret(requestCtx.TenantId, tokenRequest);
 
         user.ThrowAuthExceptionIfNull(Errors.invalid_request, "Invalid token or client id");
 
@@ -361,6 +363,8 @@ public class TenantSettings
     public string SecretKey { get; set; }
     public string CertificateFile { get; set; }
     public string CertificatePassword { get; set; }
+    public string LoginUrl { get; set; }
+    public string LogoutUrl { get; set; }
 }
 
 ///https://jasonwatmore.com/post/2021/06/02/net-5-create-and-validate-jwt-tokens-use-custom-jwt-middleware

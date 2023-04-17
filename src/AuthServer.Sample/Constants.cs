@@ -109,5 +109,10 @@ public class Constants
             public const string uti = "uti";
             public const string ver = "ver";
         }
+
+        public static class UrlParams
+        {
+             public const string tenantId = "{tenantId}"; 
+        }
     }
 }

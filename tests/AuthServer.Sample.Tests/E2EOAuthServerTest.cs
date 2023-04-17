@@ -1,8 +1,9 @@
-﻿using AuthServer.Sample.Extentions;
-using AuthServer.Sample.Models;
+﻿using AuthServer.Sample.Models;
+using AuthServer.Sample.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 using System.Net.Http.Json;
 using static AuthServer.Sample.Constants.Auth;
@@ -104,6 +105,10 @@ public class TestAuthWebApplication : WebApplicationFactory<Program>
 {
     protected override TestServer CreateServer(IWebHostBuilder builder)
     {
+        builder.ConfigureServices(sp => 
+        {
+            sp.TryAddScoped<TenantSettings>(s => new TenantSettings { LoginUrl = "/auth/login" });        
+        });
         return base.CreateServer(builder);
     }
 }

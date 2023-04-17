@@ -62,8 +62,12 @@ namespace AuthServer.Sample.Tests
             };
             var jwtSigningService = new JwtSigningService(settings);
             var util = new JwtUtils(jwtSigningService);
+            TenantSettings tenantSettings = new()
+            {
+                
+            };
 
-            var service = new OAuth2Token(util, moqClientDataProvider.Object);
+            var service = new OAuth2Token(util, moqClientDataProvider.Object, tenantSettings);
             var tokenRequest = new OAuthTokenRequest() { 
                 client_id="TestClient id", grant_type = GrantType.client_credentials, client_secret="SuperS3cr3t"
             };
@@ -110,8 +114,11 @@ namespace AuthServer.Sample.Tests
             };
             var jwtSigningService = new JwtSigningService(settings);
             var util = new JwtUtils(jwtSigningService);
+            TenantSettings tenantSettings = new()
+            {
 
-            var service = new OAuth2Token(util, moqClientDataProvider.Object);
+            };
+            var service = new OAuth2Token(util, moqClientDataProvider.Object, tenantSettings);
             var tokenRequest = new OAuthTokenRequest() { 
                 client_id = "TestClient id", 
                 grant_type = GrantType.password,
