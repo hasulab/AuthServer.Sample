@@ -154,6 +154,31 @@ app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenReq
 })
     .WithName(Authorize.V2PostEPName);
 
+
+app.MapGet(Login.V1Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+{
+    return Results.Ok();
+})
+    .WithName(Login.V1GetEPName);
+
+app.MapGet(Login.V2Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+{
+    return Results.Ok();
+})
+    .WithName(Login.V2GetEPName);
+
+app.MapGet(Logout.V1Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+{
+    return Results.Ok();
+})
+    .WithName(Logout.V1GetEPName);
+
+app.MapGet(Logout.V2Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+{
+    return Results.Ok();
+})
+    .WithName(Logout.V2GetEPName);
+
 app.Use(async (context, next) =>
 {
     //context.Request.HasFormContentType
