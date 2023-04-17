@@ -57,11 +57,16 @@ var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
 app.Use(async (context, next) =>
 {
     context.SetRequestContext();
+
     if (context.Request.HasFormContentType)
     {
         await context.Request.FormContentToJson();
     }
-    context.SetTenantsContext();
+
+    if (context.HasValidAuthPath())
+    {
+        context.SetTenantsContext();
+    }
 
     await next(context);
 

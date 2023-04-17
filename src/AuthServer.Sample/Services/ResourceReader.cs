@@ -381,6 +381,7 @@ public class TenantsDataProvider : ITenantsDataProvider
     {
         _authSettings = authOptions.Value;
     }
+
     public TenantSettings GetTenantSettings(Guid tenantId)
     {
         return _authSettings.Tenants

@@ -130,15 +130,46 @@ public static class HttpContextExtensions
         var requestContext = context.Features.Get<AuthRequestContext>();
         if (requestContext != null && requestContext.HasTenantId)
         {
-            var tenantSettings = context.RequestServices.GetService<ITenantsDataProvider>()
-            .GetTenantSettings(requestContext.TenantId);
+            var tenantSettings = GetTenantSettings(context, requestContext.TenantId);
             context.Features.Set(tenantSettings);
         }
     }
+
+    private static TenantSettings GetTenantSettings(HttpContext context, Guid tenantId)
+    {
+        return context.RequestServices.GetService<ITenantsDataProvider>().GetTenantSettings(tenantId);
+    }
+
     public static TenantSettings? GetTenantsContext(this HttpContext context)
     {
         return context.Features.Get<TenantSettings>();
     }
+
+    static readonly List<string> ValidAuthPaths = new()
+    {
+        WellKnownConfig.V1Url,
+        WellKnownConfig.V2Url,
+        Token.V1Url,
+        Token.V2Url,
+        Authorize.V1Url,
+        Authorize.V2Url,
+        Login.V1Url,
+        Login.V2Url,
+        Logout.V1Url,
+        Logout.V2Url
+    };
+
+    public static bool HasValidAuthPath(this HttpContext context)
+    {
+        var requestContext = context.Features.Get<AuthRequestContext>();
+        if (requestContext != null && requestContext.HasTenantId)
+        {
+            var validAuthPath = requestContext.Path?.Replace(requestContext.TenantId.ToString(), UrlParams.tenantId) ?? string.Empty;
+            return ValidAuthPaths.Contains(validAuthPath); 
+        }
+        return false;
+    }
+
 }
 
 public static class NullObjectCheck

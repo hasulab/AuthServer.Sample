@@ -53,7 +53,33 @@ public class Constants
 
             public const string V1GetEPName = "Get-v1-oauth2-authorize";
             public const string V2GetEPName = "Get-v2-oauth2-authorize";
+        }
 
+        public static class Login
+        {
+            //"/oauth2/authorize"
+            public const string V1Url = "/{tenantId}/auth/login";
+            public const string V2Url = "/{tenantId}/auth/v2.0/login";
+
+            public const string V1PostEPName = "v1-auth-login";
+            public const string V2PostEPName = "v2-auth-login";
+
+            public const string V1GetEPName = "Get-v1-auth-login";
+            public const string V2GetEPName = "Get-v2-auth-login";
+        }
+
+
+        public static class Logout
+        {
+            //"/oauth2/authorize"
+            public const string V1Url = "/{tenantId}/auth/logout";
+            public const string V2Url = "/{tenantId}/auth/v2.0/logout";
+
+            public const string V1PostEPName = "v1-auth-logout";
+            public const string V2PostEPName = "v2-auth-logout";
+
+            public const string V1GetEPName = "Get-v1-auth-logout";
+            public const string V2GetEPName = "Get-v2-auth-logout";
         }
 
         public static class GrantType
