@@ -21,13 +21,11 @@ builder.Services
     .AddScoped<ITenantsDataProvider, TenantsDataProvider>()
     .AddScoped<AuthRequestContext>((sp) =>
     {
-        var HttpContextAccessor = sp.GetService<IHttpContextAccessor>();
-        return HttpContextAccessor?.HttpContext?.GetRequestContext()?? new AuthRequestContext();
+        return sp.GetHttpContextFeature<AuthRequestContext>() ?? new AuthRequestContext();
     })
     .AddScoped<TenantSettings>((sp) =>
     {
-        var HttpContextAccessor = sp.GetService<IHttpContextAccessor>();
-        return HttpContextAccessor?.HttpContext?.GetTenantsContext()?? new TenantSettings();
+        return sp.GetHttpContextFeature<TenantSettings>() ?? new TenantSettings();
     })
     ;
 builder.Services.AddOptions<AuthSettings>().BindConfiguration("AuthSettings");
