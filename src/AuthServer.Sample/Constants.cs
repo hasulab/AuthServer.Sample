@@ -55,6 +55,16 @@ public class Constants
             public const string V2GetEPName = "Get-v2-oauth2-authorize";
         }
 
+        public static class AuthPage
+        {
+            public const string ClientId = "_ClientId_";
+            public const string TenantId = "_TenantId_";
+            public const string PostLoginPath = "_PostLoginPath_";
+            public const string Links = "_Links_";
+            public const string HomePageV1 = "_HomePageV1_";
+            public const string HomePageV2 = "_HomePageV2_";
+        }
+
         public static class Login
         {
             //"/oauth2/authorize"
@@ -66,6 +76,18 @@ public class Constants
 
             public const string V1GetEPName = "Get-v1-auth-login";
             public const string V2GetEPName = "Get-v2-auth-login";
+
+            public const string V1ResourceName = "AuthServer.Sample.Resources.auth-login-page.html";
+            public const string V2ResourceName = "AuthServer.Sample.Resources.V2.auth-login-page.html";
+
+        }
+
+        public static class IndexPage
+        {
+
+            public const string V1ResourceName = "AuthServer.Sample.Resources.auth-index-page.html";
+            public const string V2ResourceName = "AuthServer.Sample.Resources.V2.auth-index-page.html";
+
         }
 
 

@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
-using static AuthServer.Sample.Constants.Auth;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -21,6 +21,8 @@ builder.Services
     .AddScoped<IJwtUtils, JwtUtils>()
     .AddScoped<ClientDataProvider>()
     .AddScoped<ITenantsDataProvider, TenantsDataProvider>()
+    .AddScoped<IAuthPageViewService, AuthPageViewService>()
+//    .AddScoped<IAuthPageViewService, AuthPageViewService> ()
     .AddScoped<AuthRequestContext>((sp) =>
     {
         return sp.GetHttpContextFeature<AuthRequestContext>() ?? new AuthRequestContext();
@@ -56,7 +58,7 @@ var currentFileProvider = app.Environment.ContentRootFileProvider as PhysicalFil
 
 //get app current ContentRootFileProvider
 
-var myFileProvider = new MyPhysicalFileProvider(currentFileProvider?.Root!);
+var myFileProvider = new MyPhysicalFileProvider(currentFileProvider?.Root!, app?.Services?.GetService<IHttpContextAccessor>()!);
 app.Environment.ContentRootFileProvider = myFileProvider;
 var authSettings = app.Services.GetService<IOptions<AuthSettings>>();
 
@@ -91,22 +93,18 @@ app.Use(async (context, next) =>
 //app.UseEndpoints();
 app.UseRouting();
 
-app.MapGet("/", (LinkGenerator linker) =>
+app.MapGet("/", (LinkGenerator linker, IAuthPageViewService viewService) =>
        {
-           var urls = new Dictionary<string, string?>()
-           {
-               { "V1 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V1EPName, values: new { tenantId = Guid.Empty }) },
-               { "V2 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V2EPName, values: new { tenantId = Guid.Empty }) },
-               { "V1 /oauth2/token",linker.GetPathByName(Token.V1EPName, values: new { tenantId = Guid.Empty }) },
-               { "V2 /oauth2/token",linker.GetPathByName(Token.V2EPName, values: new { tenantId = Guid.Empty }) },
-               { "V1 /oauth2/authorize",linker.GetPathByName(Authorize.V1GetEPName, values: new { tenantId = Guid.Empty }) },
-               { "V2 /oauth2/authorize",linker.GetPathByName(Authorize.V2GetEPName, values: new { tenantId = Guid.Empty }) },
-           }
-           .Select(x => $"<tr><td><a href='{x.Value}'>{x.Key}</a></td></tr>").ToArray();
+           var v2HomePage = linker.GetPathByName(AuthPage.HomePageV2, values: new { tenantId = Guid.Empty });
+           return Results.Redirect(v2HomePage);
+       })
+    .WithName(AuthPage.HomePageV1);
 
-           var htmlBody = $"<div><span>The link to the</span> <table>{ string.Join(",", urls) }</table></dv>";
-           return Results.Content($"<html><body></body>{htmlBody}</html>", "text/html; charset=utf-8");
-       });
+app.MapGet("/{tenantId}", (HttpRequest request, IAuthPageViewService viewService, string tenantId) =>
+{
+    return viewService.RenderHomePage(tenantId);
+})
+    .WithName(AuthPage.HomePageV2);
 
 app.MapGet(WellKnownConfig.V1Url, (WellKnownConfiguration configuration, HttpRequest request, string tenantId) =>
 {
@@ -168,9 +166,9 @@ app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenReq
     .WithName(Authorize.V2PostEPName);
 
 
-app.MapGet(Login.V1Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+app.MapGet(Login.V1Url, (HttpRequest request, IAuthPageViewService viewService, string tenantId) =>
 {
-    return Results.Ok();
+    return viewService.RenderLogin(tenantId);
 })
     .WithName(Login.V1GetEPName);
 
@@ -204,32 +202,3 @@ app.Run();
 
 
 public partial class Program { }
-
-class MyPhysicalFileProvider : IFileProvider, IDisposable
-{
-    readonly PhysicalFileProvider fileProvider;
-
-    public MyPhysicalFileProvider(string root)
-    {
-        fileProvider = new PhysicalFileProvider(root);
-    }
-    public void Dispose()
-    {
-        fileProvider?.Dispose();
-    }
-
-    public IDirectoryContents GetDirectoryContents(string subpath)
-    {
-        return fileProvider.GetDirectoryContents(subpath);
-    }
-
-    public IFileInfo GetFileInfo(string subpath)
-    {
-        return fileProvider.GetFileInfo(subpath);
-    }
-
-    public IChangeToken Watch(string filter)
-    {
-        return fileProvider.Watch(filter);
-    }
-}

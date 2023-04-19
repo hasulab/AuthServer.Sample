@@ -351,7 +351,10 @@ public static class ResultsExtensions
 
         return new HtmlResult(html);
     }
-
+    public static IResult Html(string html)
+    {
+        return new HtmlResult(html);
+    }
 
     class HtmlResult : IResult
     {

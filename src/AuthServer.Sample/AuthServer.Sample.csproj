@@ -18,8 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\auth-login-page.html" />
     <EmbeddedResource Include="Resources\oauth-token-access_token-response.json" />
     <EmbeddedResource Include="Resources\openid-configuration.json" />
+    <EmbeddedResource Include="Resources\auth-index-page.html" />
     <EmbeddedResource Include="Resources\V2\openid-configuration.json" />
   </ItemGroup>
 

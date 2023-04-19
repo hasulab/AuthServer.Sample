@@ -1,7 +1,9 @@
 ﻿using AuthServer.Sample.Exceptions;
 using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Models;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
@@ -389,6 +391,43 @@ public class TenantsDataProvider : ITenantsDataProvider
     }
 }
 
+
+class MyPhysicalFileProvider : IFileProvider, IDisposable
+{
+    readonly PhysicalFileProvider fileProvider;
+    private readonly IHttpContextAccessor httpContextAccessor;
+
+    public MyPhysicalFileProvider(string root, IHttpContextAccessor httpContextAccessor)
+    {
+        fileProvider = new PhysicalFileProvider(root);
+        this.httpContextAccessor = httpContextAccessor;
+    }
+    public void Dispose()
+    {
+        fileProvider?.Dispose();
+    }
+
+    public IDirectoryContents GetDirectoryContents(string subpath)
+    {
+        return fileProvider.GetDirectoryContents(subpath);
+    }
+
+    public IFileInfo GetFileInfo(string subpath)
+    {
+        var requestContext = httpContextAccessor?.HttpContext?.GetRequestContext()!;
+        if (requestContext?.HasTenantId == true)
+        {
+
+        }
+        return fileProvider.GetFileInfo(subpath);
+    }
+
+    public IChangeToken Watch(string filter)
+    {
+        return fileProvider.Watch(filter);
+    }
+}
+
 public interface IJwtSigningService
 {
     SecurityKey GetSecurityKey(Guid tenantId);
@@ -529,6 +568,65 @@ public class JwtUtils : IJwtUtils
             // return null if validation fails
             return false;
         }
+    }
+}
+
+public interface IAuthPageViewService
+{
+    IResult RenderHomePage(string? tenantId);
+    IResult RenderLogin(string tenantId);
+}
+
+public class AuthPageViewService: IAuthPageViewService
+{
+    private readonly AuthRequestContext requestConext;
+    private readonly ResourceReader resourceReader;
+    private readonly LinkGenerator linker;
+
+    public AuthPageViewService(AuthRequestContext requestConext,
+        ResourceReader resourceReader,
+        LinkGenerator linker)
+    {
+        this.requestConext = requestConext;
+        this.resourceReader = resourceReader;
+        this.linker = linker;
+    }
+
+    public IResult RenderHomePage(string? tenantId)
+    {
+        tenantId = tenantId ?? Guid.Empty.ToString();
+
+        var links = new Dictionary<string, string?>()
+           {
+               { "V1 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V1EPName, values: new { tenantId }) },
+               { "V2 /.well-known/openid-configuration",linker.GetPathByName(WellKnownConfig.V2EPName, values: new { tenantId }) },
+               { "V1 /oauth2/token",linker.GetPathByName(Token.V1EPName, values: new { tenantId }) },
+               { "V2 /oauth2/token",linker.GetPathByName(Token.V2EPName, values: new { tenantId }) },
+               { "V1 /oauth2/authorize",linker.GetPathByName(Authorize.V1GetEPName, values: new { tenantId }) },
+               { "V2 /oauth2/authorize",linker.GetPathByName(Authorize.V2GetEPName, values: new { tenantId }) },
+           }
+        .Select(x => $"<a href='{x.Value}'>{x.Key}</a>").ToArray();
+
+        var submitPath = linker.GetPathByName(Token.V1EPName, values: new { tenantId });
+
+        var sbHtml = new StringBuilder(resourceReader.GetStringFromResource(IndexPage.V1ResourceName))
+            .Replace(AuthPage.TenantId, tenantId)
+            .Replace(AuthPage.PostLoginPath, submitPath)
+            .Replace(AuthPage.Links, string.Join('\n', links))
+            .Replace(AuthPage.ClientId, tenantId); //TODO: ClientId from request
+
+        return ResultsExtensions.Html(sbHtml.ToString());
+    }
+    public IResult RenderLogin(string tenantId)
+    {
+        var submitPath = linker.GetPathByName(Token.V1EPName, values: new { tenantId });
+
+        var sbHtml = new StringBuilder(resourceReader.GetStringFromResource(Login.V1ResourceName))
+            .Replace(AuthPage.TenantId, tenantId)
+            .Replace(AuthPage.PostLoginPath, submitPath)
+            .Replace(AuthPage.ClientId, tenantId); //TODO: ClientId from request
+
+        return ResultsExtensions.Html(sbHtml.ToString());
     }
 }
 

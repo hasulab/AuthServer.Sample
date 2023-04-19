@@ -8,3 +8,4 @@ global using GrantType = AuthServer.Sample.Constants.Auth.GrantType;
 global using TokenType = AuthServer.Sample.Constants.Auth.TokenType;
 global using ResponseType = AuthServer.Sample.Constants.Auth.ResponseType;
 global using UrlParams = AuthServer.Sample.Constants.Auth.UrlParams;
+global using static AuthServer.Sample.Constants.Auth;
