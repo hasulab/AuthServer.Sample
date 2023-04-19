@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using static AuthServer.Sample.Constants.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,8 +51,19 @@ if (app.Environment.IsDevelopment())
                                     $"{builder.Environment.ApplicationName} v1"));
 }
 
+
+var currentFileProvider = app.Environment.ContentRootFileProvider as PhysicalFileProvider;
+
+//get app current ContentRootFileProvider
+
+var myFileProvider = new MyPhysicalFileProvider(currentFileProvider?.Root!);
+app.Environment.ContentRootFileProvider = myFileProvider;
 var authSettings = app.Services.GetService<IOptions<AuthSettings>>();
 
+app.UseStaticFiles(new StaticFileOptions()
+{
+    FileProvider = myFileProvider
+});
 var tmp = RoutePatternFactory.Parse("/{guid}/test/1");
 //Microsoft.AspNetCore.Http.DefaultHttpContext
 
@@ -191,3 +204,32 @@ app.Run();
 
 
 public partial class Program { }
+
+class MyPhysicalFileProvider : IFileProvider, IDisposable
+{
+    readonly PhysicalFileProvider fileProvider;
+
+    public MyPhysicalFileProvider(string root)
+    {
+        fileProvider = new PhysicalFileProvider(root);
+    }
+    public void Dispose()
+    {
+        fileProvider?.Dispose();
+    }
+
+    public IDirectoryContents GetDirectoryContents(string subpath)
+    {
+        return fileProvider.GetDirectoryContents(subpath);
+    }
+
+    public IFileInfo GetFileInfo(string subpath)
+    {
+        return fileProvider.GetFileInfo(subpath);
+    }
+
+    public IChangeToken Watch(string filter)
+    {
+        return fileProvider.Watch(filter);
+    }
+}
