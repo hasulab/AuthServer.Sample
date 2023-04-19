@@ -100,7 +100,7 @@ app.MapGet("/", (LinkGenerator linker, IAuthPageViewService viewService) =>
        })
     .WithName(AuthPage.HomePageV1);
 
-app.MapGet("/{tenantId}", (HttpRequest request, IAuthPageViewService viewService, string tenantId) =>
+app.MapGet("/{tenantId}/v2.0", (HttpRequest request, IAuthPageViewService viewService, string tenantId) =>
 {
     return viewService.RenderHomePage(tenantId);
 })

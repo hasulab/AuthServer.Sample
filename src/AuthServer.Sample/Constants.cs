@@ -57,10 +57,11 @@ public class Constants
 
         public static class AuthPage
         {
-            public const string ClientId = "_ClientId_";
-            public const string TenantId = "_TenantId_";
-            public const string PostLoginPath = "_PostLoginPath_";
-            public const string Links = "_Links_";
+            public const string ClientId = "{_ClientId_}";
+            public const string TenantId = "{_TenantId_}";
+            public const string PostLoginPath = "{_PostLoginPath_}";
+            public const string Links = "{_Links_}";
+
             public const string HomePageV1 = "_HomePageV1_";
             public const string HomePageV2 = "_HomePageV2_";
         }
