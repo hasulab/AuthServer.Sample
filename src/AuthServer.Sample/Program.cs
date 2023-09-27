@@ -1,4 +1,4 @@
-using AuthServer.Sample.Extentions;
+using AuthServer.Sample.Extensions;
 using AuthServer.Sample.Models;
 using AuthServer.Sample.Services;
 using Microsoft.AspNetCore.Mvc;

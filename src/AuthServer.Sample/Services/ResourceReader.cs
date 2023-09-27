@@ -1,5 +1,4 @@
 ﻿using AuthServer.Sample.Exceptions;
-using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Models;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
@@ -10,6 +9,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using AuthServer.Sample.Extensions;
 
 namespace AuthServer.Sample.Services;
 
