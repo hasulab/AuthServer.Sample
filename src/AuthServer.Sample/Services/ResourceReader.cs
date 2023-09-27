@@ -568,7 +568,7 @@ public class JwtUtils : IJwtUtils
 public interface IAuthPageViewService
 {
     IResult RenderHomePage(string? tenantId);
-    IResult RenderLogin(string tenantId);
+    IResult RenderLogin(string tenantId, string requestToken);
 }
 
 public class AuthPageViewService: IAuthPageViewService
@@ -611,9 +611,9 @@ public class AuthPageViewService: IAuthPageViewService
 
         return ResultsExtensions.Html(sbHtml.ToString());
     }
-    public IResult RenderLogin(string tenantId)
+    public IResult RenderLogin(string tenantId, string requestToken)
     {
-        var submitPath = linker.GetPathByName(Token.V1EPName, values: new { tenantId });
+        var submitPath = linker.GetPathByName(Token.V1EPName, values: new { tenantId, requestToken });
 
         var sbHtml = new StringBuilder(resourceReader.GetStringFromResource(Login.V1ResourceName))
             .Replace(AuthPage.TenantId, tenantId)

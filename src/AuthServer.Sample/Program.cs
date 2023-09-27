@@ -161,9 +161,10 @@ app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenReq
     .WithName(Authorize.V2PostEPName);
 
 
-app.MapGet(Login.V1Url, (HttpRequest request, IAuthPageViewService viewService, string tenantId) =>
+app.MapGet(Login.V1Url, (HttpRequest request, IAuthPageViewService viewService, 
+        string tenantId, string requestToken) =>
 {
-    return viewService.RenderLogin(tenantId);
+    return viewService.RenderLogin(tenantId, requestToken);
 })
     .WithName(Login.V1GetEPName);
 
