@@ -127,7 +127,6 @@ namespace AuthServer.Sample.Tests
                 password="P@ssword"
             };
             var jwtToken = service.GenerateResponse(tokenRequest, requestContext);
-
         }
     }
 }

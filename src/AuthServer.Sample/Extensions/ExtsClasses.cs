@@ -47,23 +47,9 @@ public static class RequestExtensions
 
         var queryString = request.QueryString.Value ?? string.Empty;
 
-        var enumerator = queryString.ToDictionary().GetEnumerator();
-        var hasMore = enumerator.MoveNext();
-
-        StringBuilder stringBuilder = new("{");
-        while (hasMore)
-        {
-            var field = enumerator.Current;
-            stringBuilder.Append($"\"{field.Key}\":\"{field.Value}\"");
-            hasMore = enumerator.MoveNext();
-            if (hasMore)
-            {
-                stringBuilder.Append(',');
-            }
-        }
-
-        stringBuilder.Append('}');
-        return JsonSerializer.Deserialize<T>(stringBuilder.ToString());        
+        return queryString
+            .ToDictionary()
+            .ToObject<T>();
     }
 }
 
@@ -274,7 +260,7 @@ public static class AuthResults
     }
 }
 
-public static class ObjectExtentions
+public static class ObjectExtensions
 {
     public static Dictionary<string,string> ToDictionary<T>(this T t)
         where T: class
@@ -294,15 +280,39 @@ public static class ObjectExtentions
 #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
 
     }
+}
 
+public static class DictionaryExtensions
+{
     public static string ToQueryString(this Dictionary<string, string> queryDictionary)
     {
         var queryString = string.Join('&', queryDictionary.Select(x => $"{x.Key}={x.Value}"));
-        return queryString; 
+        return queryString;
 
     }
-}
 
+    public static T ToObject<T>(this Dictionary<string, string> queryDictionary)
+        where T : class, new()
+    {
+        var enumerator = queryDictionary.GetEnumerator();
+        var hasMore = enumerator.MoveNext();
+
+        StringBuilder stringBuilder = new("{");
+        while (hasMore)
+        {
+            var field = enumerator.Current;
+            stringBuilder.Append($"\"{field.Key}\":\"{field.Value}\"");
+            hasMore = enumerator.MoveNext();
+            if (hasMore)
+            {
+                stringBuilder.Append(',');
+            }
+        }
+
+        stringBuilder.Append('}');
+        return JsonSerializer.Deserialize<T>(stringBuilder.ToString());
+    }
+}
 public static class StringExtensions
 { 
     public static string ToBase64String(this string plainText)
@@ -310,6 +320,13 @@ public static class StringExtensions
         var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
         var base64EncodedText = Convert.ToBase64String(plainTextBytes);
         return base64EncodedText;
+    }
+
+    public static string FromBase64String(this string base64String)
+    {
+        var plainTextBytes = Convert.FromBase64String(base64String);
+        var plainText = Encoding.UTF8.GetString(plainTextBytes);
+        return plainText;
     }
 
     public static Dictionary<string, string> ToDictionary(this string queryString)
@@ -331,13 +348,8 @@ public static class ServiceProviderExtensions
     public static T? GetHttpContextFeature<T>(this IServiceProvider serviceProvider)
         where T: class, new()
     {
-        var HttpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-        if (HttpContextAccessor?.HttpContext?.Features != null)
-        {
-            return HttpContextAccessor?.HttpContext.Features.Get<T>();
-        }
-        else
-            return null;
+        var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
+        return httpContextAccessor?.HttpContext?.Features?.Get<T>();
     }
 }
 
@@ -354,7 +366,7 @@ public static class ResultsExtensions
         return new HtmlResult(html);
     }
 
-    class HtmlResult : IResult
+    private class HtmlResult : IResult
     {
         private readonly string _html;
 
