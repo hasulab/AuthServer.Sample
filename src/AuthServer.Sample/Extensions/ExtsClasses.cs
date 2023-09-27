@@ -1,16 +1,14 @@
-﻿using AuthServer.Sample.Services;
-using System.Text.RegularExpressions;
+﻿using System.Net.Mime;
 using System.Text;
-using AuthServer.Sample.Models;
-using AuthServer.Sample.Exceptions;
-using Microsoft.AspNetCore.Http;
 using System.Text.Json;
-using static AuthServer.Sample.Constants.Auth;
-using System.Net.Mime;
+using System.Text.RegularExpressions;
+using AuthServer.Sample.Exceptions;
+using AuthServer.Sample.Models;
+using AuthServer.Sample.Services;
 
-namespace AuthServer.Sample.Extentions;
+namespace AuthServer.Sample.Extensions;
 
-public static class RequestExtentions
+public static class RequestExtensions
 {
     public static async Task FormContentToJson(this HttpRequest request)
     {
@@ -36,7 +34,7 @@ public static class RequestExtentions
         stringBuilder.Append("}");
 
         request.ContentType = "application/json";
-        request.Body = StreamExtentions.GenerateStreamFromStringBuilder(stringBuilder);
+        request.Body = StreamExtensions.GenerateStreamFromStringBuilder(stringBuilder);
     }
 
     public static T QueryStringTo<T>(this HttpRequest request)
@@ -191,7 +189,7 @@ public static class NullObjectCheck
     }
 }
 
-public static class StreamExtentions
+public static class StreamExtensions
 {
     public static Stream GenerateStreamFromString(string s)
     {
@@ -305,7 +303,7 @@ public static class ObjectExtentions
     }
 }
 
-public static class StringExtentions
+public static class StringExtensions
 { 
     public static string ToBase64String(this string plainText)
     {
@@ -328,7 +326,7 @@ public static class StringExtentions
     }
 }
 
-public static class ServiceProviderExtentions
+public static class ServiceProviderExtensions
 {
     public static T? GetHttpContextFeature<T>(this IServiceProvider serviceProvider)
         where T: class, new()

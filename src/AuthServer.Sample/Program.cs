@@ -1,15 +1,10 @@
 using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Models;
 using AuthServer.Sample.Services;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Patterns;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
-using System;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services

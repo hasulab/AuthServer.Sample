@@ -228,10 +228,10 @@ public class OAuth2Token
     public OAuthAuthorizeResponse BuildAuthorizeResponse(OAuthTokenRequest tokenRequest,
         AuthRequestContext requestCtx)
     {
-
         var tokenRequestQuery = tokenRequest.ToDictionary().ToQueryString();
         var encodedToken = tokenRequestQuery.ToBase64String();
         var loginUrl = _tenantSettings.LoginUrl?.Replace(UrlParams.tenantId, requestCtx.TenantId.ToString());
+
         return new OAuthAuthorizeResponse
         {
             LoginUrl = loginUrl,
@@ -573,15 +573,15 @@ public interface IAuthPageViewService
 
 public class AuthPageViewService: IAuthPageViewService
 {
-    private readonly AuthRequestContext requestConext;
+    private readonly AuthRequestContext requestContext;
     private readonly ResourceReader resourceReader;
     private readonly LinkGenerator linker;
 
-    public AuthPageViewService(AuthRequestContext requestConext,
+    public AuthPageViewService(AuthRequestContext requestContext,
         ResourceReader resourceReader,
         LinkGenerator linker)
     {
-        this.requestConext = requestConext;
+        this.requestContext = requestContext;
         this.resourceReader = resourceReader;
         this.linker = linker;
     }
