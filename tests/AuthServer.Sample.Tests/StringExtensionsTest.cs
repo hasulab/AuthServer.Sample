@@ -1,5 +1,7 @@
-﻿using AuthServer.Sample.Extensions;
+﻿using System.Collections;
+using AuthServer.Sample.Extensions;
 using AuthServer.Sample.Models;
+using Microsoft.AspNetCore.Mvc.TagHelpers.Cache;
 
 namespace AuthServer.Sample.Tests;
 
@@ -32,5 +34,106 @@ public class StringExtensionsTest
         var toTestData= toDictionary.ToObject<OAuthTokenRequest>();
 
         Assert.NotNull(toTestData);
+
+        System.Collections.ArrayList arrayList = new System.Collections.ArrayList
+        {
+            testData,
+            queryString,
+            10
+        };
+        var aa = arrayList[0];
+        var sl = new System.Collections.SortedList();
+        
+        var ht = new System.Collections.Hashtable();
+        ht.Add(1, 1);
+        var hs = new System.Collections.Generic.HashSet<string>();
+        var ss = new System.Collections.Generic.SortedSet<string>();
+    }
+
+    //[Fact]
+    [Theory]
+    [InlineData(1)]
+    [MemberData(nameof(TestData))]
+    public void Test(int ab)
+    {
+        MyClassA a = new MyClassC();
+        var ga= a.Get();
+        MyClassB b = new MyClassC();
+        var gb = b.Get();
+
+        MyClassC c = new MyClassC();
+        var gc = c.Get();
+
+
+        var s = new MyStruct(10);
+    }
+
+    public static IEnumerable<object[]> TestData()
+    {
+        yield return new object[] { 1, 2, 3 };
+    }
+    class MyClassA
+    {
+        public MyClassA()
+        {
+            ; // First 
+        }
+
+        public MyClassA(int a)
+        {
+            ; //First
+        }
+
+        public virtual int Get()
+        {
+            return 10;
+        }
+
+        public IEnumerable<int> Test()
+        {
+            yield return 1;
+            yield return 1;
+            yield return 1;
+          
+        }
+    }
+
+    class MyClassB : MyClassA
+    {
+        public MyClassB() : base(10)
+        {
+            ; //second
+        }
+
+        public override int Get()
+        {
+            return 11;
+        }
+    }
+    class MyClassC : MyClassB
+    {
+        public MyClassC():base()
+        {
+            ; // third
+        }
+
+        public new int Get()
+        {
+            return 12;
+        }
+    }
+
+    struct MyStruct
+    {
+        //public MyStruct()
+        //{
+        //    ;
+        //}
+
+        public MyStruct(int a)
+        {
+            ;
+        }
+
     }
 }
