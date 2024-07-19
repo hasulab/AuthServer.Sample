@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
-using AuthServer.Sample.Extentions;
+using AuthServer.Sample.Extensions;
 using static AuthServer.Sample.Constants.Auth;
 using AuthServer.Sample.Models;
 
@@ -127,7 +127,6 @@ namespace AuthServer.Sample.Tests
                 password="P@ssword"
             };
             var jwtToken = service.GenerateResponse(tokenRequest, requestContext);
-
         }
     }
 }

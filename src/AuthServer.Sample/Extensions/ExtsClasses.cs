@@ -1,16 +1,14 @@
-﻿using AuthServer.Sample.Services;
-using System.Text.RegularExpressions;
+﻿using System.Net.Mime;
 using System.Text;
-using AuthServer.Sample.Models;
-using AuthServer.Sample.Exceptions;
-using Microsoft.AspNetCore.Http;
 using System.Text.Json;
-using static AuthServer.Sample.Constants.Auth;
-using System.Net.Mime;
+using System.Text.RegularExpressions;
+using AuthServer.Sample.Exceptions;
+using AuthServer.Sample.Models;
+using AuthServer.Sample.Services;
 
-namespace AuthServer.Sample.Extentions;
+namespace AuthServer.Sample.Extensions;
 
-public static class RequestExtentions
+public static class RequestExtensions
 {
     public static async Task FormContentToJson(this HttpRequest request)
     {
@@ -36,7 +34,7 @@ public static class RequestExtentions
         stringBuilder.Append("}");
 
         request.ContentType = "application/json";
-        request.Body = StreamExtentions.GenerateStreamFromStringBuilder(stringBuilder);
+        request.Body = StreamExtensions.GenerateStreamFromStringBuilder(stringBuilder);
     }
 
     public static T QueryStringTo<T>(this HttpRequest request)
@@ -49,23 +47,9 @@ public static class RequestExtentions
 
         var queryString = request.QueryString.Value ?? string.Empty;
 
-        var enumerator = queryString.ToDictionary().GetEnumerator();
-        var hasMore = enumerator.MoveNext();
-
-        StringBuilder stringBuilder = new("{");
-        while (hasMore)
-        {
-            var field = enumerator.Current;
-            stringBuilder.Append($"\"{field.Key}\":\"{field.Value}\"");
-            hasMore = enumerator.MoveNext();
-            if (hasMore)
-            {
-                stringBuilder.Append(',');
-            }
-        }
-
-        stringBuilder.Append('}');
-        return JsonSerializer.Deserialize<T>(stringBuilder.ToString());        
+        return queryString
+            .ToDictionary()
+            .ToObject<T>();
     }
 }
 
@@ -191,7 +175,7 @@ public static class NullObjectCheck
     }
 }
 
-public static class StreamExtentions
+public static class StreamExtensions
 {
     public static Stream GenerateStreamFromString(string s)
     {
@@ -276,7 +260,7 @@ public static class AuthResults
     }
 }
 
-public static class ObjectExtentions
+public static class ObjectExtensions
 {
     public static Dictionary<string,string> ToDictionary<T>(this T t)
         where T: class
@@ -296,22 +280,53 @@ public static class ObjectExtentions
 #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
 
     }
+}
 
+public static class DictionaryExtensions
+{
     public static string ToQueryString(this Dictionary<string, string> queryDictionary)
     {
         var queryString = string.Join('&', queryDictionary.Select(x => $"{x.Key}={x.Value}"));
-        return queryString; 
+        return queryString;
 
     }
-}
 
-public static class StringExtentions
+    public static T ToObject<T>(this Dictionary<string, string> queryDictionary)
+        where T : class, new()
+    {
+        var enumerator = queryDictionary.GetEnumerator();
+        var hasMore = enumerator.MoveNext();
+
+        StringBuilder stringBuilder = new("{");
+        while (hasMore)
+        {
+            var field = enumerator.Current;
+            stringBuilder.Append($"\"{field.Key}\":\"{field.Value}\"");
+            hasMore = enumerator.MoveNext();
+            if (hasMore)
+            {
+                stringBuilder.Append(',');
+            }
+        }
+
+        stringBuilder.Append('}');
+        return JsonSerializer.Deserialize<T>(stringBuilder.ToString());
+    }
+}
+public static class StringExtensions
 { 
     public static string ToBase64String(this string plainText)
     {
         var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
         var base64EncodedText = Convert.ToBase64String(plainTextBytes);
         return base64EncodedText;
+    }
+
+    public static string FromBase64String(this string base64String)
+    {
+        var plainTextBytes = Convert.FromBase64String(base64String);
+        var plainText = Encoding.UTF8.GetString(plainTextBytes);
+        return plainText;
     }
 
     public static Dictionary<string, string> ToDictionary(this string queryString)
@@ -328,18 +343,13 @@ public static class StringExtentions
     }
 }
 
-public static class ServiceProviderExtentions
+public static class ServiceProviderExtensions
 {
     public static T? GetHttpContextFeature<T>(this IServiceProvider serviceProvider)
         where T: class, new()
     {
-        var HttpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-        if (HttpContextAccessor?.HttpContext?.Features != null)
-        {
-            return HttpContextAccessor?.HttpContext.Features.Get<T>();
-        }
-        else
-            return null;
+        var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
+        return httpContextAccessor?.HttpContext?.Features?.Get<T>();
     }
 }
 
@@ -356,7 +366,7 @@ public static class ResultsExtensions
         return new HtmlResult(html);
     }
 
-    class HtmlResult : IResult
+    private class HtmlResult : IResult
     {
         private readonly string _html;
 

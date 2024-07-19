@@ -1,5 +1,4 @@
-﻿using AuthServer.Sample.Services;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace AuthServer.Sample.Models;
 
@@ -21,7 +20,7 @@ internal record AuthUser
 
 
 
-public record class AuthRequestContext
+public record AuthRequestContext
 {
     public string IPAddress { get; internal set; }
     public string Path { get; internal set; }

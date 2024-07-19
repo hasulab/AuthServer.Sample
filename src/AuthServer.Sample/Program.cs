@@ -1,15 +1,10 @@
-using AuthServer.Sample.Extentions;
+using AuthServer.Sample.Extensions;
 using AuthServer.Sample.Models;
 using AuthServer.Sample.Services;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Patterns;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
-using System;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -120,71 +115,72 @@ app.MapGet(WellKnownConfig.V2Url, (WellKnownConfiguration configuration, HttpReq
 })
     .WithName(WellKnownConfig.V2EPName);
 
-app.MapPost(Token.V1Url, (OAuth2Token tokenService,[FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Token.V1Url, (OAuth2Token tokenService,[FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestContext) =>
 {
     return AuthResults.HandleAuhResponse(tokenRequest.response_mode,
-            ()=> tokenService.GenerateResponse(tokenRequest, requestConext));
+            ()=> tokenService.GenerateResponse(tokenRequest, requestContext));
 })
     .WithName(Token.V1EPName);
 
-app.MapPost(Token.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Token.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestContext) =>
 {
     return AuthResults.HandleAuhResponse(tokenRequest.response_mode,
-            () => tokenService.GenerateResponse(tokenRequest, requestConext));
+            () => tokenService.GenerateResponse(tokenRequest, requestContext));
 })
     .WithName(Token.V2EPName);
 
 
-app.MapGet(Authorize.V1Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestConext) =>
+app.MapGet(Authorize.V1Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestContext) =>
 {
     var tokenRequest = request.QueryStringTo<OAuthTokenRequest>();
-    return AuthResults.HandleAuhResponse(()=> tokenService.BuildAuthorizeResponse(tokenRequest, requestConext));
+    return AuthResults.HandleAuhResponse(()=> tokenService.BuildAuthorizeResponse(tokenRequest, requestContext));
 })
     .WithName(Authorize.V1GetEPName);
 
-app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Authorize.V1Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestContext) =>
 {
     return AuthResults.HandleAuhResponse(tokenRequest.response_mode ?? ResponseMode.fragment,
-            () => tokenService.GenerateResponse(tokenRequest, requestConext), tokenRequest.redirect_uri);
+            () => tokenService.GenerateResponse(tokenRequest, requestContext), tokenRequest.redirect_uri);
 
 })
     .WithName(Authorize.V1PostEPName);
 
-app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestConext) =>
+app.MapGet(Authorize.V2Url, (OAuth2Token tokenService, HttpRequest request, [FromServices] AuthRequestContext requestContext) =>
 {
     var tokenRequest = request.QueryStringTo<OAuthTokenRequest>();
-    return AuthResults.HandleAuhResponse(() => tokenService.BuildAuthorizeResponse(tokenRequest, requestConext));
+    return AuthResults.HandleAuhResponse(() => tokenService.BuildAuthorizeResponse(tokenRequest, requestContext));
 })
     .WithName(Authorize.V2GetEPName);
 
-app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestConext) =>
+app.MapPost(Authorize.V2Url, (OAuth2Token tokenService, [FromBody] OAuthTokenRequest tokenRequest, [FromServices] AuthRequestContext requestContext) =>
 {
     return AuthResults.HandleAuhResponse(tokenRequest.response_mode ?? ResponseMode.fragment,
-            () => tokenService.GenerateResponse(tokenRequest, requestConext));
+            () => tokenService.GenerateResponse(tokenRequest, requestContext));
 
 })
     .WithName(Authorize.V2PostEPName);
 
 
-app.MapGet(Login.V1Url, (HttpRequest request, IAuthPageViewService viewService, string tenantId) =>
+app.MapGet(Login.V1Url, (HttpRequest request, IAuthPageViewService viewService, 
+        string tenantId, string requestToken) =>
 {
-    return viewService.RenderLogin(tenantId);
+    return viewService.RenderLogin(tenantId, requestToken);
 })
     .WithName(Login.V1GetEPName);
 
-app.MapGet(Login.V2Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+app.MapGet(Login.V2Url, (HttpRequest request, [FromServices] AuthRequestContext requestContext, string tenantId) =>
 {
     return Results.Ok();
 })
     .WithName(Login.V2GetEPName);
 
-app.MapGet(Logout.V1Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+app.MapGet(Logout.V1Url, (HttpRequest request, [FromServices] AuthRequestContext requestContext, string tenantId) =>
 {
     return Results.Ok();
 })
     .WithName(Logout.V1GetEPName);
 
-app.MapGet(Logout.V2Url, (HttpRequest request, [FromServices] AuthRequestContext requestConext, string tenantId) =>
+app.MapGet(Logout.V2Url, (HttpRequest request, [FromServices] AuthRequestContext requestContext, string tenantId) =>
 {
     return Results.Ok();
 })

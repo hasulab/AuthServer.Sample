@@ -1,21 +1,15 @@
 ﻿using AuthServer.Sample.Exceptions;
-using AuthServer.Sample.Extentions;
 using AuthServer.Sample.Models;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
-using System.Data;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using static AuthServer.Sample.Constants.Auth;
+using AuthServer.Sample.Extensions;
 
 namespace AuthServer.Sample.Services;
 
@@ -234,10 +228,10 @@ public class OAuth2Token
     public OAuthAuthorizeResponse BuildAuthorizeResponse(OAuthTokenRequest tokenRequest,
         AuthRequestContext requestCtx)
     {
-
         var tokenRequestQuery = tokenRequest.ToDictionary().ToQueryString();
         var encodedToken = tokenRequestQuery.ToBase64String();
         var loginUrl = _tenantSettings.LoginUrl?.Replace(UrlParams.tenantId, requestCtx.TenantId.ToString());
+
         return new OAuthAuthorizeResponse
         {
             LoginUrl = loginUrl,
@@ -574,20 +568,20 @@ public class JwtUtils : IJwtUtils
 public interface IAuthPageViewService
 {
     IResult RenderHomePage(string? tenantId);
-    IResult RenderLogin(string tenantId);
+    IResult RenderLogin(string tenantId, string requestToken);
 }
 
 public class AuthPageViewService: IAuthPageViewService
 {
-    private readonly AuthRequestContext requestConext;
+    private readonly AuthRequestContext requestContext;
     private readonly ResourceReader resourceReader;
     private readonly LinkGenerator linker;
 
-    public AuthPageViewService(AuthRequestContext requestConext,
+    public AuthPageViewService(AuthRequestContext requestContext,
         ResourceReader resourceReader,
         LinkGenerator linker)
     {
-        this.requestConext = requestConext;
+        this.requestContext = requestContext;
         this.resourceReader = resourceReader;
         this.linker = linker;
     }
@@ -617,9 +611,9 @@ public class AuthPageViewService: IAuthPageViewService
 
         return ResultsExtensions.Html(sbHtml.ToString());
     }
-    public IResult RenderLogin(string tenantId)
+    public IResult RenderLogin(string tenantId, string requestToken)
     {
-        var submitPath = linker.GetPathByName(Token.V1EPName, values: new { tenantId });
+        var submitPath = linker.GetPathByName(Token.V1EPName, values: new { tenantId, requestToken });
 
         var sbHtml = new StringBuilder(resourceReader.GetStringFromResource(Login.V1ResourceName))
             .Replace(AuthPage.TenantId, tenantId)
